@@ -17,7 +17,8 @@ GitHub repo, (3) pushing, and (4) going live on Binder / Google Colab.
 | `heterogeneity_screening.ipynb` | the live notebook (bundled data + GitHub-raw fallback) |
 | `requirements.txt` | `numpy`, `matplotlib` (everything Binder/Colab needs to install) |
 | `data/timeseries/*.csv` | 4 SPE11b simulator time series |
-| `scripts/*.py` | standalone modules (`facies_heterogeneity`, `benchmark_analysis`, `make_figures`) |
+| `data/spatial_maps_rice1/*.csv` | representative rice1 spatial maps |
+| `scripts/*.py` | `spe11b_regime_analysis`, `benchmark_analysis`, `plume_analysis`, `make_figures` |
 | `manuscript.md`, `figures/` | the paper and its figures |
 | `benchmark_spec/GROUND_TRUTH.md` | every verified fact and number |
 
@@ -41,18 +42,18 @@ pip install numpy matplotlib jupyter nbformat nbconvert ipykernel
 ### 1.2 Run the standalone scripts and check the numbers
 
 ```bash
-python scripts/facies_heterogeneity.py
-python scripts/benchmark_analysis.py
-python scripts/make_figures.py        # writes figures/ (needs matplotlib)
+python scripts/spe11b_regime_analysis.py   # dimensionless regime + seal balance
+python scripts/benchmark_analysis.py       # inventory + inter-simulator agreement
+python scripts/plume_analysis.py           # plume centroid rise / migration
+python scripts/make_figures.py             # writes figures/ (needs matplotlib)
 ```
 
 Confirm these **exact** values appear (they are the paper's ground truth):
 
-- `V_DP = 0.6592` and the one-sigma band `0.50–0.77`
-- reservoir sands `[101.3, 202.6, 506.6, 1013.2, 2026.5]`, arithmetic mean `770.1 mD`
-- `E_s(V=0) = 0.528`, `E_s(V=0.66) = 0.355` at PVI=0.05, φ=0.20
-- benchmark inventory: `rice1` at 50 yr → mobile `16.5%`, box budget `20.8%`
-- figures: `fig1_compartments.png`, `fig2_sweep_vs_pvi.png`, `fig3_vdp_sensitivity.png`
+- `t_grav = 43.4 yr`, `R_L = 2.21`, gravity number `26`, `seal entry = 0.194 MPa`, `breach ~133 m`
+- agreement: mobile spread `0.40` (robust) vs seal spread `~115x` (fragile) at 1000 yr
+- plume: net rise `+204 m`, net up-dip migration `+706 m`
+- figures: `fig1_agreement.png`, `fig2_plume.png`, `fig3_regime.png`
 
 ### 1.3 Execute the notebook headlessly (the real test)
 

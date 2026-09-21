@@ -1,4 +1,4 @@
-# Formation Heterogeneity in Analytical CO₂ Storage Screening: An Open-Source Implementation of Dykstra–Parsons, Shook–Mitchell and Kopp Corrections, Applied to the SPE11b Field-Scale Benchmark
+# Gravity-Dominated CO₂ Storage and the Limits of Agreement in the SPE11b Benchmark
 
 **Daniel Olagunju**
 
@@ -27,461 +27,328 @@ SPE copyright.
 
 ## Abstract
 
-Analytical screening of CO₂ storage sites frequently treats the reservoir as homogeneous,
-whereas real formations exhibit permeability heterogeneity that reduces sweep efficiency,
-enlarges the pressure footprint, and alters long-term trapping. This paper makes three
-contributions. First, it presents an open-source Python implementation of three established
-analytical heterogeneity corrections — the Dykstra–Parsons permeability-variation
-coefficient, the Shook & Mitchell (2009) sweep efficiency, and the Kopp et al. (2010)
-storage-efficiency capacity factor — with transparent, unit-explicit code and no
-unverifiable calibration constants. Second, it derives the Dykstra–Parsons coefficient of
-the SPE11b benchmark directly from its published facies table, obtaining
-**V_DP = 0.66** (reservoir sands 101–2027 mD, arithmetic mean 770 mD), together with a
-sampling-uncertainty band of **0.50–0.77**. Third, it characterises the SPE11b field-scale
-benchmark inventory from its official four-simulator time series, treating the
-inter-simulator spread as the irreducible model uncertainty. Three findings follow.
-Residual (immobile) trapping is effectively **zero** at
-end of injection (<0.1% of injected CO₂), so screening tools that centre on residual
-trapping mis-allocate the dominant long-term mechanisms — dissolution and structural
-trapping. At end of injection roughly **70–80% of the injected CO₂ is unaccounted for by
-the box time series alone**, residing in reservoir facies outside the reporting boxes. And
-sweep efficiency is a *different physical quantity* from the compartment mass inventory
-reported by SPE11b, so a quantitative comparison between the two requires a
-benchmark-consistent efficiency metric, which does not currently exist. The open-source
-implementation and the benchmark characterisation are offered as a reproducible reference
-for screening-tool development and for benchmarking analysis against SPE11b.
+The SPE11b benchmark (Nordbotten et al., 2024) is the community's field-scale reference for
+CO₂ storage simulation, yet its governing flow regime and the limits of what it can be used
+to validate are rarely stated explicitly. This paper provides a reproducible, evidence-only
+characterisation of three properties of SPE11b that bear directly on how it should be used.
+First, we locate its dimensionless regime. With `L/H = 7`, anisotropy `k_v/k_h = 0.1`, an
+effective aspect ratio `R_L = (L/H)√(k_v/k_h) ≈ 2.2`, and thermophysical properties evaluated
+from the Span–Wagner/Fenghour equations of state (ρ_CO₂ ≈ 850 kg/m³, Δρ ≈ 150 kg/m³,
+μ_CO₂ ≈ 8.2×10⁻⁵ Pa·s at 30 MPa), the time for CO₂ to rise the full 1200 m reservoir height
+under buoyancy is **~43 years — comparable to the 50-year injection period**. SPE11b is
+therefore a *transitional gravity–viscous* system: viscous and buoyant forces are co-active
+during injection, and buoyancy dominates the 950-year post-shut-in period that controls
+long-term fate. Its seal (facies 1) has a capillary entry pressure of only **~0.19 MPa**,
+overcome by the buoyancy head of a CO₂ column taller than **~100–200 m**, so containment
+rests on structural closure and low seal permeability rather than capillary strength.
+Second, we quantify cross-simulator agreement. The four simulators agree on the mobile
+fraction (spread ≈ 40% at 50 yr) but **diverge by one to two orders of magnitude** on the
+long-term security quantities — residual (immobile) trapping and structural (seal) trapping
+— with one participant (rice1) reporting ~3× more long-term trapping than the others. Third,
+from the spatial maps we show the domain-wide plume's mass centroid rises ~200 m and migrates
+~700 m up-dip toward the anticline over 1000 yr, while the reporting boxes account for only
+~20–30% of injected CO₂ at shut-in. The practical conclusion: SPE11b can validate plume
+mobility and extent, but not long-term trapping, because the simulators themselves have not
+converged on those mechanisms.
 
-**Keywords:** CO₂ geological storage; formation heterogeneity; Dykstra–Parsons coefficient;
-sweep efficiency; SPE11b benchmark; analytical screening; uncertainty quantification;
-open-source.
+**Keywords:** CO₂ geological storage; SPE11b benchmark; gravitational segregation; capillary
+entry; inter-simulator agreement; dimensionless numbers; benchmark validation.
 
 ---
 
 ## 1. Introduction
 
-Permeability heterogeneity is a first-order control on CO₂ storage performance. In layered
-or interbedded saline aquifers, injected CO₂ channels preferentially through high-permeability
-strata, bypassing lower-permeability intervals. This bypassing simultaneously reduces the
-fraction of pore volume contacted (sweep efficiency), enlarges the pressure footprint
-(area of review), and modulates the trapping mechanisms that operate over decades to
-centuries (Bachu, 2000; Goodman et al., 2011).
+CO₂ geological storage performance is assessed by analytical screening tools, reduced
+models, and full reservoir simulation, and each is ultimately benchmarked against some
+reference. The 11th Society of Petroleum Engineers Comparative Solution Project, Version 11B
+(SPE11b), is the current de facto field-scale reference for CO₂ storage simulation
+(Nordbotten et al., 2024): an 8.4 km × 1.2 km faulted cross-section with an anticline and a
+low-permeability seal, injected over 50 years and monitored for 1000 years. Because it is
+public and multi-simulator, SPE11b is the natural target for anyone building or validating a
+screening or simulation workflow.
 
-At least three analytical tools quantify these effects. The **Dykstra–Parsons coefficient**
-V_DP summarises permeability variation from core or log data (Dykstra and Parsons, 1950).
-The **Shook–Mitchell sweep efficiency** expresses the fraction of pore volume swept as a
-function of V_DP and pore volumes injected (Shook and Mitchell, 2009). The **Kopp storage
-efficiency** combines geometric, sweep and displacement sub-factors into a capacity
-coefficient (Kopp et al., 2010). These correlations are well cited but are rarely
-implemented in accessible screening tools, and are easily misapplied when a single
-efficiency scalar is compared against full-physics simulation output.
+Using a benchmark well requires knowing two things: *what physical regime it occupies*, and
+*how sharply its reference answers are defined*. A screening tool validated against SPE11b
+must be validated against a quantity the benchmark actually constrains. This paper supplies
+both pieces of information, derived purely from the published problem definition and the
+released simulator output, with no fitted parameters.
 
-The SPE11b benchmark (Nordbotten et al., 2024) is a field-scale, heterogeneously faulted
-CO₂ storage cross-section designed explicitly to stress-test simulators against realistic
-Norwegian-continental-shelf conditions. It is a natural reference for any heterogeneity
-correction. However, as we document in Section 3, SPE11b reports a *compartment mass
-inventory* (mobile, immobile, dissolved, seal, boundary CO₂) and defines **no** sweep or
-storage-efficiency scalar, and **no** Dykstra–Parsons coefficient. These two facts have
-important consequences for how analytical corrections may — and may not — be tested
-against the benchmark.
+The central finding is that SPE11b is a **transitional gravity–viscous** system, not a
+purely viscous displacement and not a purely gravity-segregated plume: the buoyancy
+timescale (~43 yr) is comparable to the injection timescale (50 yr). This single observation
+explains the benchmark's otherwise puzzling behaviour — negligible residual trapping at
+shut-in, slow gravity-driven dissolution and structural trapping thereafter, and a large
+spread among simulators precisely on those long-term mechanisms.
 
-The specific contributions of this paper are: (1) a clean, reproducible implementation of
-the three corrections; (2) a documented derivation of V_DP from the SPE11b facies, with a
-sampling-uncertainty band; and (3) an uncertainty-aware benchmark inventory that shows
-where analytical screening metrics and field-scale simulation diverge in kind, not just
-in magnitude.
+Three contributions follow. We (i) compute the governing dimensionless groups and
+timescales; (ii) quantify the cross-simulator agreement, classifying each reported quantity
+as robust or fragile; and (iii) trace the domain-wide plume evolution from the spatial maps,
+including the capillary–gravity balance of the seal.
 
 ---
 
-## 2. Analytical framework and open-source implementation
+## 2. The SPE11b benchmark
 
-### 2.1 Dykstra–Parsons coefficient
+SPE11b (Nordbotten et al., 2024) is a 2D vertical cross-section, 8400 m × 1200 m, with a
+nominal depth of 1 m; all masses are per metre of nominal thickness. It is a **closed**
+system: no-flow boundaries augmented by large pore-volume multipliers (ℓ_B = 5×10⁴ m) on the
+left/right boundaries within facies 2–5. Seven facies comprise one seal (facies 1,
+k = 1.0×10⁻¹⁶ m², φ = 0.10), five reservoir sands (facies 2–6, k = 1.0×10⁻¹³ to 2.0×10⁻¹² m²,
+φ = 0.20–0.35), and one impermeable unit (facies 7). Permeability is anisotropic, with
+k_v = 0.1 k_h. Two wells inject pure CO₂ at 0.035 kg/(s·m): Well 1 for years 0–50 and Well 2
+for years 25–50, giving a total injected mass of
 
-For a permeability field characterised by a log-normal distribution with log-standard
-deviation σ_ln, the Dykstra–Parsons coefficient is
+    0.035 × (50 + 25) × 3.1536×10⁷ = 8.2782×10⁷ kg/m,             (1)
 
-    V_DP = 1 − exp(−σ_ln)                                     (1)
+where one year ≡ 365 days = 31,536,000 s. The reservoir is monitored to 1000 years.
 
-Equivalently, V_DP = (k_50 − k_84.1)/k_50, where k_84.1 is the permeability at one
-log-standard-deviation below the median. V_DP ranges from 0 (homogeneous) to values
-approaching 1 (extreme heterogeneity). In Section 4.2 we estimate σ_ln directly from the
-SPE11b facies table.
-
-### 2.2 Shook–Mitchell sweep efficiency (empirical screening adaptation)
-
-We follow the empirical screening adaptation of Shook and Mitchell (2009). A Formation
-Quality Index (FQI) is defined, and the sweep efficiency is expressed as a closed-form
-exponential surrogate fitted to reproduce the breakthrough behaviour of the
-Shook–Mitchell heterogeneity framework:
-
-    FQI = √(1/(1−V)) · (1−V)/φ                              (2)
-    E_s = 1 − exp(−3 · PVI · FQI)                            (3)
-
-with the homogeneous limit E_s = 1 − exp(−3·PVI/φ) at V = 0. Here PVI is the pore volumes
-injected and φ the porosity. The exponential form (and its coefficient 3) is a conventional
-screening approximation rather than an equation derived in Shook and Mitchell (2009)
-themselves; it is used here for tractability and is flagged as such in the accompanying
-code. E_s is a *volumetric* metric: the fraction of accessible pore volume contacted,
-hence a proxy for the fraction of the reservoir that can participate in residual and
-capillary trapping.
-
-### 2.3 Kopp et al. storage efficiency
-
-Kopp et al. (2010) define a capacity factor
-
-    E_c = E_geo · E_s · E_d                                (4)
-    E_geo = (h_net/h_gross) / √(k_h/k_v)                   (5)
-    E_d   = 1/√M                                            (6)
-
-where E_geo, E_s and E_d are geometric, sweep and displacement sub-factors respectively,
-and M is the CO₂-to-brine mobility ratio.
-
-### 2.4 Implementation
-
-All three corrections are implemented in `scripts/facies_heterogeneity.py` (MIT licence,
-NumPy-free, standard library only). Design rules followed throughout: (a) no hard-coded
-calibration constants; (b) every input read from a named source or documented as an
-assumption; (c) SI units stated and converted explicitly; (d) full reproducibility from the
-input tables in this paper.
+Two properties of the reporting convention are essential to a correct reading and are easily
+misread. First, the benchmark's time series reports CO₂ **by compartment** — mobile
+(relative permeability > 0), immobile (relative permeability = 0), dissolved, and seal-facies
+CO₂ — but only **within two localised tracking boxes** (A and B) placed over the fault zones
+and the anticline to follow plume arrival, saturation and seal dissipation; these boxes are
+*not* domain-wide mass-balance containers, and CO₂ in reservoir facies outside them appears
+only in the spatial maps. Second, the benchmark defines **no** sweep or storage-efficiency
+scalar: it reports a compartment inventory, not an efficiency.
 
 ---
 
-## 3. The SPE11b benchmark: what it actually specifies
+## 3. Method
 
-### 3.1 Geometry and operational conditions
+### 3.1 Thermophysical properties
 
-SPE11b (Nordbotten et al., 2024) is a field-scale vertical cross-section, 8400 m × 1200 m
-with a nominal depth of 1 m, configured as a **closed** system (no-flow boundaries with
-large pore-volume multipliers ℓ_B = 5×10⁴ m on the left/right boundaries within facies 2–5).
-It contains seven facies: one seal (facies 1), five reservoir sands (facies 2–6) and one
-impermeable unit (facies 7). Two wells inject pure CO₂: Well 1 at 0.035 kg/(s·m) for
-0–50 yr, Well 2 at the same rate for 25–50 yr. The total injected mass is therefore
+CO₂ density and viscosity at SPE11b conditions (initial pressure 30 MPa; geothermal
+temperature `T = 70 − 0.025z` °C, i.e. 40–70 °C across the domain) are evaluated with the
+Span and Wagner (1996) equation of state and the Fenghour, Wakeham and Vesovic (1998)
+viscosity correlation, implemented via CoolProp (Bell et al., 2014); the benchmark itself
+references NIST, to which these agree within stated tolerances. Water density uses IAPWS-95.
+Representative mid-depth values (30 MPa, 55 °C) are ρ_CO₂ = 850 kg/m³, ρ_w = 998 kg/m³,
+Δρ = 148 kg/m³, and μ_CO₂ = 8.18×10⁻⁵ Pa·s; across the 40–70 °C domain Δρ ranges 95–202 kg/m³.
 
-    0.035 × (50 + 25) × 3.1536×10⁷ = 8.2782×10⁷ kg/m.        (7)
+### 3.2 Dimensionless groups and governing timescales
 
-The reservoir is monitored for 1000 years.
+Three dimensionless quantities locate the regime. The **aspect ratio** is L/H = 7. Combined
+with the anisotropy it gives the **effective aspect ratio** of Lake (1989),
 
-### 3.2 Facies properties
+    R_L = (L/H) √(k_v/k_h) ≈ 2.2,                                 (2)
 
-Table 1 lists the facies permeabilities and porosities (Nordbotten et al., 2024, Table 4).
+which exceeds unity and therefore indicates gravity segregation across the reservoir height
+dominant over viscous sweep. The buoyant (gravity) Darcy velocity and the time to rise the
+full height are
 
-**Table 1. SPE11b facies properties.**
+    u_g = Δρ g k_v / μ_CO₂ ≈ 8.8×10⁻⁷ m/s,                        (3)
+    t_grav = H / u_g ≈ 43 yr,                                       (4)
 
-| Facies | k [m²] | k [mD] | φ |
-|--------|--------|--------|---|
-| 1 (seal) | 1.0×10⁻¹⁶ | 0.10 | 0.10 |
-| 2 | 1.0×10⁻¹³ | 101.3 | 0.20 |
-| 3 | 2.0×10⁻¹³ | 202.7 | 0.20 |
-| 4 | 5.0×10⁻¹³ | 506.6 | 0.20 |
-| 5 | 1.0×10⁻¹² | 1013.3 | 0.25 |
-| 6 | 2.0×10⁻¹² | 2026.5 | 0.35 |
-| 7 (impermeable) | 0 | 0 | 0 |
+using the vertical permeability k_v = 0.1 k_h ≈ 50 mD. The ratio to the injection timescale
+t_inj = 50 yr is t_grav/t_inj ≈ 0.9; the post-injection monitoring window is 950 yr, more than
+twenty times t_grav.
 
-Two points follow directly from Table 1. First, the permeable reservoir spans an
-arithmetic mean of **770 mD**, a value comfortably above the millidarcy-scale permeability
-often assumed for screening studies. Second, SPE11b specifies **no Dykstra–Parsons
-coefficient**; heterogeneity is prescribed by the discrete facies and the fault/anticline
-geometry, not by a V_DP value. Any V_DP quoted for this benchmark is therefore an
-estimation, not a specification (Section 4.2).
+### 3.3 Seal capillary–gravity balance
 
-### 3.3 Reported quantities
+The seal's capillary entry pressure follows the benchmark's Leverett-J scaling
+(Nordbotten et al., 2024, Eq. 3.11; after Abdoulghafour et al., 2020),
 
-The benchmark time series reports CO₂ mass *by compartment* in two reporting boxes (A and B):
-mobile free phase (relative permeability > 0), immobile free phase (relative
-permeability = 0), dissolved, and seal-facies CO₂, plus a total-seal and a boundary column
-(Sections 2.5 and 3.7). **No sweep efficiency, storage efficiency, or V_DP is reported.**
-Boxes A and B do not cover the whole domain; CO₂ in reservoir facies outside these boxes
-only appears in the spatial maps.
+    p_entry = √(φ/k_x) · 6.12×10⁻³ N/m ≈ 0.19 MPa.                 (5)
+
+The buoyancy head of a CO₂ column of height h is Δρ g h; equating to p_entry gives the
+column height that would break the seal,
+
+    h_break = p_entry / (Δρ g) ≈ 133 m  (97–208 m over the domain). (6)
+
+### 3.4 Data and inter-simulator agreement
+
+Four participating simulators — rice1, ctc-cne1, opm1 and sintef1 — provide public time
+series and spatial maps (Nordbotten et al., 2024). We compute each compartment as a fraction
+of the total injected mass (Eq. 1) and report the cross-simulator median and min–max spread.
+For a compartment with median m over four simulators, we label it *robust* if the spread
+(max − min) is a small fraction of m, *moderate* otherwise, and *fragile* when the four
+simulators differ by an order of magnitude or more; for near-zero quantities (immobile
+trapping) we report the absolute range, since relative spread is ill-conditioned at small m.
 
 ---
 
 ## 4. Results
 
-### 4.1 Benchmark inventory
+### 4.1 Dimensionless regime
 
-Using `scripts/benchmark_analysis.py`, we computed the compartment fractions as a
-percentage of the total injected mass (8.2782×10⁷ kg/m) across four participating
-simulators (rice1, ctc-cne1, opm1, sintef1). Table 2 reports selected times.
+Table 1 and Figure 3 summarise the regime. The buoyancy timescale (43 yr) is comparable to
+the injection period (50 yr) and far shorter than the monitoring window (950 yr). The
+gravity number (ratio of buoyant to injection Darcy velocity) is ~26, confirming that
+buoyancy, not viscous sweep, organises the plume. The seal entry pressure (0.19 MPa) is
+overcome by a CO₂ column of only ~100–200 m.
 
-**Table 2. SPE11b compartment inventory (% of injected CO₂).**
+**Table 1. SPE11b dimensionless regime.**
 
-| Simulator | yr | mobile | immobile | dissolved | seal | box budget |
-|-----------|---|--------|----------|-----------|------|------------|
-| rice1 | 50 | 16.5 | 0.06 | 1.9 | 2.3 | 20.8 |
-| rice1 | 1000 | 10.0 | 1.36 | 22.7 | 23.0 | 57.1 |
-| opm1 | 50 | 27.5 | 0.06 | 1.7 | 0.4 | 29.6 |
-| opm1 | 1000 | 44.3 | 0.13 | 8.9 | 0.8 | 54.2 |
-| ctc-cne1 | 50 | 25.9 | 4.39 | 1.8 | 0.3 | 32.4 |
-| ctc-cne1 | 1000 | 33.9 | 5.51 | 12.2 | 0.3 | 51.9 |
-| sintef1 | 50 | 27.5 | 0.04 | 1.6 | 0.1 | 29.3 |
-| sintef1 | 1000 | 43.9 | 0.26 | 8.6 | 0.2 | 53.0 |
+| Quantity | Value |
+|---|---|
+| Aspect ratio L/H | 7.0 |
+| Anisotropy k_v/k_h | 0.1 |
+| Effective aspect ratio R_L | 2.2 |
+| Buoyant rise velocity u_g | 8.8×10⁻⁷ m/s |
+| Time to rise 1200 m, t_grav | ~43 yr |
+| Injection duration t_inj | 50 yr |
+| Post-injection monitoring | 950 yr |
+| Gravity number (u_g / u_inj) | ~26 |
+| Seal entry pressure | 0.19 MPa |
+| CO₂ column to breach seal | ~100–200 m |
 
-**Figure 1** presents the full compartment inventory for all four participating
-simulators. Three findings are robust across simulators and are the substance of this paper.
+### 4.2 Inter-simulator agreement
 
-> **Figure 1 — SPE11b CO₂ inventory by compartment.** Stacked fraction of injected CO₂
-> (mobile, immobile/residual, dissolved, seal) at selected times over the 1000-year
-> horizon, for the four participating simulators (rice1, ctc-cne1, opm1, sintef1). The
-> hatched grey wedge is the fraction of injected CO₂ not reported by the box time series
-> (residing in reservoir facies outside boxes A and B). See `figures/fig1_compartments.png`.
+Table 2 and Figure 1 report the cross-simulator spread. The mobile fraction is the most
+robust quantity (spread ≈ 40% at 50 yr, growing to ~80% by 1000 yr). Residual (immobile)
+trapping is uniformly < 5% in all four simulators at every time, but the simulators disagree
+on its value by up to two orders of magnitude in relative terms. Structural (seal) trapping
+is the least-converged quantity: 0.14–2.31% at 50 yr (~17×) and 0.20–22.99% at 1000 yr
+(~115×). One simulator, rice1, reports systematically more long-term trapping than the other
+three (≈90% trapped at 1000 yr versus ≈56–66%).
 
-**Finding 1 — residual trapping is negligible at end of injection.** The immobile
-fraction is 0.04–4.4% at 50 yr (and remains a few percent even at 1000 yr in three of four
-simulators). Analytical screening that centres on residual/capillary trapping therefore
-describes a mechanism that is all but absent at the field conditions of this benchmark.
+**Table 2. Cross-simulator CO₂ compartment agreement (% of injected CO₂).**
 
-**Finding 2 — dissolution and (simulator-dependent) seal trapping dominate long-term.**
-Dissolved CO₂ grows to 9–23% by 1000 yr; rice1 additionally reports ~23% seal trapping
-while the other simulators report <1%. The factor-of-two-to-twenty simulator spread on
-seal and dissolved CO₂ is itself a reminder that benchmark consensus is far tighter than
-any single analytical number.
+| Year | Compartment | min | max | median | spread | class |
+|---|---|---|---|---|---|---|
+| 50 | mobile | 16.5 | 27.5 | 27.5 | 0.40 | robust |
+| 50 | immobile | 0.04 | 4.4 | 0.06 | ≈100× | fragile |
+| 50 | dissolved | 1.6 | 1.9 | 1.9 | 0.17 | robust |
+| 50 | seal | 0.14 | 2.31 | 0.36 | ≈17× | fragile |
+| 1000 | mobile | 10.0 | 44.4 | 43.9 | 0.78 | moderate |
+| 1000 | immobile | 0.13 | 5.5 | 1.36 | ≈40× | fragile |
+| 1000 | dissolved | 8.7 | 22.7 | 12.2 | 1.15 | moderate |
+| 1000 | seal | 0.20 | 22.99 | 0.75 | ≈115× | fragile |
 
-**Finding 3 — the box time series misses most of the CO₂ at early time.** At 50 yr the box
-compartments account for only 21–32% of injected CO₂ (rising to 52–57% by 1000 yr). The
-remainder lies in reservoir facies outside boxes A and B, and is invisible without the
-spatial maps. Any efficiency metric computed from the box time series alone is therefore
-incomplete by construction, and by a large margin at end of injection.
+### 4.3 Domain-wide plume evolution
 
-### 4.2 Dykstra–Parsons coefficient from the facies
-
-Restricting to the five reservoir sands (facies 2–6), the sample standard deviation of
-ln(k) is σ_ln = 1.076, giving
-
-    V_DP = 1 − exp(−1.076) = 0.66                        (8)
-
-Because this estimate is computed from only n = 5 facies, it carries sampling
-uncertainty: the standard error of the sample log-standard deviation is
-σ_ln / √(2(n−1)) ≈ 0.38, so a one-sigma band on V_DP is **0.50–0.77**. This band, not a
-single value, is the defensible estimate of heterogeneity for the SPE11b reservoir.
-
-### 4.3 Analytical sweep efficiency
-
-Table 3 lists E_s from Equation (3) at V_DP = 0 and V_DP = 0.66, for representative
-porosity and a range of pore volumes injected (SPE11b reports no PVI, so E_s is necessarily
-a function of an assumed PVI).
-
-**Table 3. Shook–Mitchell sweep efficiency, E_s.**
-
-| φ | PVI | E_s (V=0) | E_s (V=0.66) | ratio |
-|---|-----|-----------|--------------|-------|
-| 0.20 | 0.02 | 0.259 | 0.161 | 0.62 |
-| 0.20 | 0.05 | 0.528 | 0.355 | 0.67 |
-| 0.20 | 0.10 | 0.777 | 0.583 | 0.75 |
-| 0.25 | 0.05 | 0.451 | 0.296 | 0.66 |
-
-> **Figure 2 — Shook–Mitchell sweep efficiency vs. pore volumes injected**, at V_DP = 0
-> (homogeneous) and V_DP = 0.66 (SPE11b facies), for porosity 0.20 and 0.25.
-> See `figures/fig2_sweep_vs_pvi.png`.
-
-Heterogeneity reduces the sweep efficiency by 25–40% relative to the homogeneous
-assumption — a material effect and a valid qualitative statement. But the magnitude
-depends strongly on the assumed PVI, which the benchmark does not pin down.
-
-**Figure 3** shows the same sensitivity across the full V_DP range, including the Kopp
-capacity factor E_c computed with documented assumptions (net-to-gross 0.85, permeability
-anisotropy k_h/k_v = 10 per the benchmark, mobility ratio M = 10).
-
-> **Figure 3 — Sensitivity of sweep and storage-efficiency factors to V_DP**, at
-> PVI = 0.05 and φ = 0.20. E_s (sweep) and E_c (Kopp et al. capacity factor) both decline
-> monotonically with heterogeneity; the dashed line marks the SPE11b-derived V_DP = 0.66.
-> See `figures/fig3_vdp_sensitivity.png`.
-
-### 4.4 Reconciling analytical E_s with the benchmark
-
-The central difficulty is now apparent. Equation (3) returns a *volumetric sweep*, which
-in the analytical worldview feeds *residual* trapping. Table 2 shows SPE11b has *no*
-residual trapping to speak of. The benchmark's CO₂ is either still mobile, dissolved, or
-structurally trapped in the seal (rice1), none of which Equation (3) predicts — Equation
-(3) was derived for waterflood displacement in which residual saturation is the dominant
-trapping mechanism, and it does not account for dissolution or structural trapping.
-Comparing the analytical E_s (of order 0.3–0.5) to any benchmark compartment fraction is
-therefore a comparison of unlike quantities: the benchmark does not report "sweep," and
-the analytical model does not report "mobile/dissolved/seal fractions."
-
-This mismatch is structural rather than numerical. The analytical correlations were
-derived for waterflood-style displacement in which a large saturable residual phase is
-left behind; SPE11b, by contrast, is gravity-dominated, and its CO₂ either accumulates in
-the structural high (seal) or dissolves. A quantitative "validation" of a sweep-efficiency
-formula against this benchmark is therefore inherently ill-posed unless the comparison
-metric is first defined in benchmark terms (Section 5.2).
-
-### 4.5 Uncertainty quantification
-
-Two sources of uncertainty can be quantified directly and without additional assumptions.
-
-**Model uncertainty — the simulator ensemble.** The benchmark is itself an ensemble of
-four independent simulators. Table 2 exposes the consequence: at 50 yr the mobile fraction
-spans 16.5–27.5% of injected CO₂; at 1000 yr the dissolved fraction spans 8.9–22.7% and the
-seal fraction 0.3–23.0%. This factor-of-two spread — not any single simulator — is the
-defensible statement of model uncertainty for this benchmark, and it is concentrated
-precisely in the quantities most relevant to long-term security.
-
-**Parameter uncertainty — V_DP and PVI.** V_DP is known only to within the 0.50–0.77 band
-of Section 4.2, and, more importantly, PVI is not defined by the benchmark at all.
-Propagating the V_DP band through Equation (3) at PVI = 0.05 and φ = 0.20 gives E_s between
-0.30 and 0.41 (against 0.53 for the homogeneous limit), while varying PVI over the plausible
-range 0.02–0.10 moves E_s over 0.16–0.58. The combined conclusion is that an analytical
-sweep efficiency for this benchmark should be quoted as a wide band (roughly 0.2–0.6),
-with PVI the dominant source of uncertainty, rather than as a point value.
+Figure 2 traces the plume from the spatial maps (rice1 as the representative case). The
+mass centroid of the free CO₂ rises from z = 629 m at 50 yr to z = 832 m at 1000 yr
+(+204 m) and migrates from x = 3612 m to x = 4318 m (+706 m up-dip toward the anticline),
+while the plume area grows from 0.69 to 1.45 km². The domain-wide CO₂ mass is conserved at
+≈82,700 t (matching the injected 82,782 t to 0.1%), confirming the maps close the mass
+balance that the box time series (≈20–30% of injected mass) does not.
 
 ---
 
 ## 5. Discussion
 
-### 5.1 What analytical heterogeneity corrections can and cannot do
+### 5.1 A transitional regime, not a pure one
 
-The corrections implemented here remain useful as *screening heuristics*. Equation (1)–(6)
-capture the correct qualitative direction — heterogeneity reduces sweep and capacity, and
-that reduction grows with V_DP — and they are cheap to evaluate across candidate sites.
-They should be reported as such: directionally correct, magnitude-uncertain, order-of-
-magnitude screening inputs, not as predictions validated against full simulation.
+The single most important characterisation is that `t_grav ≈ t_inj`. This is why SPE11b
+cannot be reduced to either of the two textbook limits. During the 50-year injection,
+pressure-driven (viscous) and buoyant forces are *co-active*: the CO₂ is being pushed
+laterally at the same rate gravity tends to segregate it vertically. After shut-in, viscous
+forcing collapses and buoyancy is left with a 950-year window — more than twenty buoyancy
+timescales — during which the plume rises toward the anticline and the seal, dissolves, and
+gradually accumulates structurally. Any screening heuristic that assumes a single dominant
+mechanism will misstate the benchmark.
 
-### 5.2 What a defensible benchmark comparison would require
+### 5.2 Why residual trapping is negligible at shut-in
 
-A rigorous test of analytical heterogeneity corrections against SPE11b would require
-three things that do not currently exist together: (1) a benchmark-consistent definition of
-"sweep efficiency" (e.g. the fraction of mobile CO₂ that becomes immobile, computed from
-the spatial maps and the immobile-saturation criterion); (2) a V_DP estimated from the
-*full* permeability field, including the seal and the faults, not just the clean reservoir
-sands; and (3) an account of the closed-system boundary buffering that sequesters a large
-fraction of injected mass outside the reporting boxes. Building these is a worthwhile and
-clearly-scoped piece of future work.
+The compartment inventory shows immobile (residual) trapping below ~5% at all times and
+essentially zero at 50 yr. This follows directly from the regime: during active injection the
+reservoir is in continuous **primary drainage** — the non-wetting CO₂ advancing into a
+water-saturated medium — during which no residual gas is left behind; immobilisation requires
+**imbibition** (brine re-entering the swept pore space), which begins only after shut-in and
+proceeds slowly because the plume is simultaneously migrating away and dissolving. This is a
+property of a thick, gravity-dominated structural trap, *not* a general statement about CO₂
+storage: in thin, aquifer-supported formations post-shut-in imbibition traps a large fraction
+of the CO₂. Screening tools must be geology-aware; SPE11b should not be read as evidence that
+residual trapping is unimportant in general.
 
-### 5.3 The residual-trapping surprise
+### 5.3 What SPE11b can and cannot validate
 
-The near-absence of residual trapping in SPE11b at end of injection is worth emphasis for
-practitioners. Much screening guidance inherits the waterflood intuition that a significant
-fraction of the injected phase is residually trapped. The physical reason that intuition
-fails here is drainage-versus-imbibition hysteresis: during the 50-year active injection
-the reservoir undergoes continuous **primary drainage** — the non-wetting CO₂ advancing
-into an initially water-saturated medium — during which no residual gas is trapped; an
-immobile CO₂ phase only appears once brine re-enters the swept region after shut-in, i.e.
-during post-shut-in **imbibition**. The benchmark's reported immobile fraction (<0.1% at
-50 yr) indicates this imbibition has barely begun within the reporting boxes at end of
-injection. Combined with the deep, warm, low-viscosity supercritical-CO₂ conditions and
-strong gravity segregation into a structural high, this leaves dissolution and structural
-trapping as the dominant long-term mechanisms. Screening tools should therefore weight
-these mechanisms — not residual trapping — when assessing long-term security for analogues
-of this benchmark.
+Table 2 answers the practical question. SPE11b *can* validate plume mobility and extent: all
+four simulators agree, to within roughly a factor of two, on the mobile fraction and the
+early dissolved fraction. SPE11b *cannot* currently validate long-term trapping: residual and
+structural trapping — the quantities that determine storage security — differ by one to two
+orders of magnitude across simulators, and the trajectory of that spread grows with time.
+A tool that claims "agreement with SPE11b" on total trapped CO₂ is agreeing with neither a
+consensus nor a single reference, because the benchmark's own ensemble has not converged on
+that quantity. This is the central caution of this paper.
 
-### 5.4 Limitations
+### 5.4 The seal is capillary-modest
 
-The V_DP estimate of Section 4.2 uses only the five reservoir facies and treats them as a
-discrete proxy for a log-normal field; the faults and the seal are excluded, so 0.66 (band
-0.50–0.77) is an approximation. The benchmark inventory in Table 2 is reported per
-simulator and is not averaged, precisely to preserve the spread that any rigorous
-comparison must confront. Finally, PVI — an input to Equation (3) — is not defined by the
-benchmark, and E_s is reported as a function of PVI and of the V_DP band rather than as a
-single number.
+The capillary–gravity balance (Eq. 6) shows the facies-1 seal can hold only ~100–200 m of CO₂
+column before its entry pressure is exceeded. Containment in SPE11b therefore rests on the
+structural closure of the anticline and the low seal permeability, not on capillary sealing
+strength. This is consistent with the benchmark's stated purpose of testing capture of
+migration into and through the seal — and it warns against using SPE11b's seal behaviour as a
+generic proxy for strong capillary seals.
 
-### 5.5 Practical significance for CCUS and petroleum engineering
+### 5.5 Toward benchmark-consistent metrics
 
-The contribution here is methodological rather than a new physical law, but it bears on
-three practical questions asked repeatedly in CCUS project development.
-
-**A concrete, citable benchmark value.** Dykstra–Parsons coefficients are routinely quoted
-for screening studies but rarely traceable to a source. This paper supplies a documented,
-reproducible V_DP for a public field-scale benchmark — 0.66, with a 0.50–0.77 sampling
-band — that practitioners can use to calibrate their own heterogeneity inputs or to
-cross-check a screening tool against a known reference.
-
-**A corrected intuition about long-term trapping.** Screening guidance inherited from
-waterflood tends to emphasise residual (capillary) trapping as the workhorse mechanism. The
-SPE11b field-scale result here is the opposite: at end of injection the immobile fraction
-is negligible, and dissolution plus structural trapping carry the long-term security
-burden. Operators who parameterise storage-security or "trapping-efficiency" arguments
-against a field-scale analogue should weight the latter mechanisms, not residual trapping.
-
-**Benchmark literacy.** The finding that the box time-series accounts for only ~20–30% of
-injected CO₂ at end of injection is a practical warning: "storage-efficiency" style
-metrics extracted from SPE11b box outputs alone understate the inventory, and the full
-budget requires the spatial maps. This matters for quality assurance of simulator
-submissions to the benchmark and for regulators who request simulator-based containment
-demonstrations.
+If analytical or reduced models are to be validated against SPE11b, the comparison must be
+made in benchmark terms. A benchmark-consistent screening metric would (i) treat the boxes
+as local monitoring regions and compute efficiency from the spatial maps; (ii) separate
+mobile, immobile, dissolved and structurally-trapped CO₂ rather than collapsing them into a
+single sweep number; and (iii) quote an uncertainty inherited from the simulator ensemble,
+not a point value. None of these is a large conceptual change, but their absence is what
+makes many screening-level comparisons to SPE11b ill-posed.
 
 ---
 
 ## 6. Conclusions
 
-1. We provide an open-source, unit-explicit implementation of the Dykstra–Parsons,
-   Shook–Mitchell and Kopp analytical heterogeneity corrections (Equations 1–6), available
-   in `scripts/facies_heterogeneity.py`.
+1. SPE11b is a **transitional gravity–viscous** system: the buoyancy timescale (~43 yr) is
+   comparable to the injection period (50 yr), so viscous and buoyant forces are co-active
+   during injection and buoyancy dominates the 950-year post-shut-in period. Effective aspect
+   ratio R_L ≈ 2.2 and gravity number ~26 are consistent with this regime.
 
-2. The Dykstra–Parsons coefficient of the SPE11b reservoir, derived from its facies table,
-   is **V_DP = 0.66** (reservoir sands 101–2027 mD, mean 770 mD), with a sampling band of
-   0.50–0.77. The benchmark itself defines no V_DP; the value here is an estimate with its
-   uncertainty stated.
+2. Its seal is **capillary-modest**: entry pressure ≈ 0.19 MPa is overcome by a CO₂ column of
+   only ~100–200 m, so containment depends on structural closure and low seal permeability.
 
-3. A benchmark inventory of SPE11b (Table 2) shows residual trapping is **negligible**
-   (<0.1% at 50 yr), dissolution and seal trapping dominate long-term with large simulator
-   spread, and the box time series misses most of the injected CO₂ at end of injection
-   (~70–80%).
+3. The four simulators **agree on plume mobility (≈40% spread) but diverge by one to two
+   orders of magnitude on long-term trapping** (residual and structural), the spread growing
+   with time and dominated by a single outlier (rice1).
 
-4. Analytical "sweep efficiency" and the benchmark compartment inventory are different
-   physical quantities, so a meaningful quantitative comparison requires a
-   benchmark-consistent efficiency metric.
+4. The domain-wide plume **rises ~200 m and migrates ~700 m up-dip** over 1000 yr, while the
+   reporting boxes capture only ~20–30% of injected CO₂ at shut-in.
 
-5. Uncertainty is quantifiable and material: the four-simulator ensemble spans roughly a
-   factor of two on long-term trapping quantities, and analytic sweep efficiency is
-   uncertain to a wide band dominated by PVI.
-
-6. Analytical heterogeneity corrections remain legitimate screening heuristics — the
-   open-source implementation is offered for reuse — but they must be reported with their
-   uncertainty and not treated as validated predictions against full simulation.
+5. Consequently, SPE11b **can validate plume migration but not long-term trapping**, and any
+   validation claim should be made in benchmark-consistent terms — compartment-wise, from
+   spatial maps, with the simulator-ensemble spread reported as uncertainty.
 
 ---
 
 ## Data and code availability
 
-A live, self-contained Jupyter notebook reproducing every result and figure in this paper
-is available at **https://github.com/todak2000/co2-heterogeneity-screening**, where it can
-be run interactively without installation via its Binder or Google Colab launcher:
+A live, self-contained Jupyter notebook reproducing every result and figure in this paper is
+available at **https://github.com/todak2000/co2-heterogeneity-screening**, runnable without
+installation via Binder or Google Colab:
 
 - *Notebook:* `heterogeneity_screening.ipynb`
 - *Binder:* https://mybinder.org/v2/gh/todak2000/co2-heterogeneity-screening/HEAD?labpath=heterogeneity_screening.ipynb
 - *Colab:* https://colab.research.google.com/github/todak2000/co2-heterogeneity-screening/blob/main/heterogeneity_screening.ipynb
 
-All scripts and data are also provided in that repository under `scripts/`, `data/` and
-`figures/`.
-- `scripts/facies_heterogeneity.py` — facies, V_DP and E_s/E_c computation.
-- `scripts/benchmark_analysis.py` — SPE11b compartment inventory from the time series.
-- `scripts/make_figures.py` — reproduces Figures 1–3.
-- `data/timeseries/` — SPE11b time series (rice1, ctc-cne1, opm1, sintef1).
-- `data/spatial_maps_rice1/` — representative rice1 spatial maps.
-- `figures/` — Figures 1–3 (PNG, 300 dpi).
-- `benchmark_spec/` — the official SPE CSP-11 description and a `GROUND_TRUTH.md`
-  documenting every verified fact and number used here.
-
-The SPE11b data are from the 11th SPE Comparative Solution Project
-(Nordbotten et al., 2024; https://spe.org/csp/spe11).
+Standalone modules `scripts/spe11b_regime_analysis.py`, `scripts/benchmark_analysis.py` and
+`scripts/plume_analysis.py` reproduce the tables; `scripts/make_figures.py` reproduces the
+figures. SPE11b data are from Nordbotten et al. (2024), https://spe.org/csp/spe11.
 
 ---
 
 ## References
 
-Bachu, S. (2000). Sequestration of CO₂ in geological media: criteria and approach for
-site selection in response to climate change. *Energy Conversion and Management*,
-41(9), 953–970.
+Abdoulghafour, H., et al. (2020). [capillary entry scaling used in the SPE11b problem
+definition, Nordbotten et al. 2024, Eq. 3.11].
 
-Dykstra, H. and Parsons, R.L. (1950). The prediction of oil recovery by waterflood.
-*Secondary Recovery of Oil in the United States*, 2nd ed., API, 160–174.
+Bachu, S. (2000). Sequestration of CO₂ in geological media: criteria and approach for site
+selection in response to climate change. *Energy Conversion and Management*, 41(9), 953–970.
 
-Goodman, A., Hakala, A., Bromhal, G., et al. (2011). U.S. DOE methodology for the
-development of geologic storage potential of CO₂ at national and regional scale.
-*International Journal of Greenhouse Gas Control*, 5(4), 952–965.
+Bell, I.H., Wronski, J., Quoilin, S. and Lemort, V. (2014). Pure and pseudo-pure fluid
+thermophysical property evaluation and the open-source thermophysical property library
+CoolProp. *Industrial & Engineering Chemistry Research*, 53(6), 2498–2508.
 
-Kopp, A., Class, H. and Helmig, R. (2010). Investigation on CO₂ storage capacity in
-saline aquifers. Part 2: Estimation of storage capacity coefficients. *International
-Journal of Greenhouse Gas Control*, 4(3), 408–418.
+Fenghour, A., Wakeham, W.A. and Vesovic, V. (1998). The viscosity of carbon dioxide.
+*Journal of Physical and Chemical Reference Data*, 27(1), 31–44.
 
-Nordbotten, J.M., Fernø, M.A., Flemisch, B., Kovscek, A.R. and Lie, K.-A. (2024). The
-11th Society of Petroleum Engineers Comparative Solution Project: Problem Definition.
-*SPE Journal*. doi:10.2118/218015-PA.
+Lake, L.W. (1989). *Enhanced Oil Recovery*. Prentice Hall, Englewood Cliffs, New Jersey.
 
-Shook, G.M. and Mitchell, K.M. (2009). A robust measure of heterogeneity for ranking
-earth models: the F-Phi curve and dynamic Lorenz coefficient. SPE-119897-MS.
+Nordbotten, J.M., Fernø, M.A., Flemisch, B., Kovscek, A.R. and Lie, K.-A. (2024). The 11th
+Society of Petroleum Engineers Comparative Solution Project: Problem Definition. *SPE
+Journal*. doi:10.2118/218015-PA.
+
+Span, R. and Wagner, W. (1996). A new equation of state for carbon dioxide covering the
+fluid region from the triple-point temperature to 1100 K at pressures up to 800 MPa.
+*Journal of Physical and Chemical Reference Data*, 25(6), 1509–1596.
 
 ---
 
-*Every number in this manuscript traces to either the SPE CSP-11 description or the
-benchmark data files in this repository; no value is asserted that cannot be reproduced
-from those sources with the scripts provided.*
+*Every number in this manuscript traces to the SPE CSP-11 description or the released
+simulator data, and is reproduced by the scripts in the accompanying repository.*

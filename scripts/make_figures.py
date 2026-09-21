@@ -1,166 +1,108 @@
 """
 make_figures.py
-==============
-Generate the publication figures for the honest heterogeneity-screening paper.
-Reads data directly from ../data and ../scripts; no hard-coded results.
+===============
+Publication figures for "Gravity-dominated storage and the limits of agreement in
+the SPE11b benchmark". Regenerates Figures 1-3 from the data in this repo.
 
-Outputs (into ../figures):
-  fig1_compartments.png   - SPE11b compartment inventory over 1000 yr (4 simulators)
-  fig2_sweep_vs_pvi.png   - Shook-Mitchell E_s vs PVI, V=0 vs V=0.66
-  fig3_vdp_sensitivity.png - E_s and E_c vs V_DP
+Figure 1 - cross-simulator CO2 compartment agreement (t=50 and t=1000 yr)
+Figure 2 - domain-wide plume centroid trajectory and areal growth (rice1)
+Figure 3 - governing timescales and the seal capillary-gravity balance
 
-Run:  python3 make_figures.py
+Run:  python3 make_figures.py   (needs numpy, matplotlib)
 """
 
-import os, csv, glob, math
+import os
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-sys_path = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(sys_path)
+SDIR = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(SDIR)
 FIGS = os.path.join(ROOT, "figures")
 os.makedirs(FIGS, exist_ok=True)
 
-from facies_heterogeneity import (shook_mitchell_E_s, kopp_E_c,
-                                  dykstra_parsons_from_lognormal, MD,
-                                  FACIES, k_md)
+from benchmark_analysis import load_sims, inventory, TOTAL_INJECTED
+from plume_analysis import plume_series
+from spe11b_regime_analysis import (T_INJ, T_MONITOR, t_grav, P_ENTRY,
+                                    DELTA_RHO, G, AR, RL)
 
-plt.rcParams.update({
-    "font.size": 9, "axes.labelsize": 9, "axes.titlesize": 9.5,
-    "legend.fontsize": 7.5, "xtick.labelsize": 7.5, "ytick.labelsize": 7.5,
-    "axes.spines.top": False, "axes.spines.right": False,
-    "figure.dpi": 300, "savefig.dpi": 300, "savefig.bbox": "tight",
-})
+plt.rcParams.update({"font.size": 9, "axes.labelsize": 9, "axes.titlesize": 9.5,
+                     "legend.fontsize": 7.5, "xtick.labelsize": 7.5,
+                     "ytick.labelsize": 7.5, "axes.spines.top": False,
+                     "axes.spines.right": False, "figure.dpi": 300,
+                     "savefig.dpi": 300, "savefig.bbox": "tight"})
 
-TOTAL_INJECTED = 0.035 * (50 * 365 * 86400) + 0.035 * (25 * 365 * 86400)
-TIMES = [50, 100, 200, 500, 1000]
-T_TARGET = {50: 1.5768e9, 100: 3.1536e9, 200: 6.3072e9,
-            500: 1.5768e10, 1000: 3.1536e10}
+SIMS = ["rice1", "ctc-cne1", "opm1", "sintef1"]
+SCOL = {"rice1": "#c0392b", "ctc-cne1": "#2b6cb0", "opm1": "#2f855a", "sintef1": "#805ad5"}
 
-# ---------------------------------------------------------------------------
-# load benchmark compartments
-# ---------------------------------------------------------------------------
-def load_rows(path):
-    out = []
-    with open(path) as fh:
-        for r in csv.reader(fh):
-            if not r or r[0].startswith("#"):
-                continue
-            try:
-                out.append([float(x) for x in r])
-            except (ValueError, IndexError):
-                continue
-    return out
+def fig1_agreement():
+    sims = load_sims()
+    inv = inventory(sims)
+    comps = [("mobile", "Mobile"), ("immobile", "Immobile (residual)"),
+             ("dissolved", "Dissolved"), ("seal", "Seal (structural)")]
+    fig, axes = plt.subplots(1, 2, figsize=(8.2, 3.6), sharey=True)
+    for ax, yr in zip(axes, (50, 1000)):
+        x = np.arange(len(comps))
+        w = 0.2
+        for i, s in enumerate(SIMS):
+            vals = [inv[yr][k][s] for k, _ in comps]
+            ax.bar(x + (i - 1.5) * w, vals, w, color=SCOL[s], label=s)
+        ax.set_xticks(x); ax.set_xticklabels([c[1] for c in comps], rotation=15, ha="right")
+        ax.set_title(f"t = {yr} yr")
+        ax.set_ylabel("Fraction of injected CO\u2082 (%)")
+    axes[0].legend(frameon=False, ncol=1, loc="upper right", fontsize=6.5)
+    fig.suptitle("SPE11b: do the four simulators agree? (per compartment)", y=1.02)
+    fig.tight_layout()
+    fig.savefig(os.path.join(FIGS, "fig1_agreement.png")); plt.close(fig)
 
-def at_year(rows, t):
-    return min(rows, key=lambda r: abs(r[0] - t))
+def fig2_plume():
+    rows = plume_series()
+    yr = [r[0] for r in rows]; xc = [r[1] for r in rows]
+    zc = [r[2] for r in rows]; area = [r[3] for r in rows]
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8.0, 3.6))
+    ax1.plot(xc, zc, "o-", color="#2b6cb0", lw=2)
+    for xt, zt, t in zip(xc, zc, yr):
+        ax1.annotate(f"{t} yr", (xt, zt), textcoords="offset points", xytext=(6, -8), fontsize=7)
+    ax1.set_xlabel("x-centroid of plume (m)"); ax1.set_ylabel("z-centroid (m)")
+    ax1.set_title("Plume centroid migrates up-dip (rice1)")
+    ax1.invert_yaxis()
+    ax2.plot(yr, area, "s-", color="#2f855a", lw=2)
+    ax2.set_xlabel("Year"); ax2.set_ylabel("Plume area (km\u00b2)")
+    ax2.set_title("Plume areal growth")
+    fig.suptitle("Domain-wide CO\u2082 plume evolution (from spatial maps)", y=1.02)
+    fig.tight_layout()
+    fig.savefig(os.path.join(FIGS, "fig2_plume.png")); plt.close(fig)
 
-def compartments(row):
-    return dict(
-        mobile=row[3] + row[7],
-        immobile=row[4] + row[8],
-        dissolved=row[5] + row[9],
-        seal=row[12],          # sealTot (all seal facies), benchmark-defined
-        boundary=row[13],
-    )
-
-def sim_data():
-    sims = {}
-    for path in sorted(glob.glob(os.path.join(ROOT, "data", "timeseries", "*.csv"))):
-        name = os.path.basename(path).replace("_time_series.csv", "")
-        rows = load_rows(path)
-        sims[name] = {yr: compartments(at_year(rows, T_TARGET[yr]))
-                      for yr in TIMES}
-    return sims
-
-# ---------------------------------------------------------------------------
-# Figure 1: compartment inventory
-# ---------------------------------------------------------------------------
-def fig1():
-    sims = sim_data()
-    order = sorted(sims.keys())
-    fig, axes = plt.subplots(2, 2, figsize=(7.0, 5.2), sharey=True)
-    cats = ["mobile", "immobile", "dissolved", "seal"]
-    labels = ["Mobile", "Immobile (residual)", "Dissolved", "Seal"]
-    colors = ["#2b6cb0", "#9b2c2c", "#2f855a", "#805ad5"]
-    bottom = np.zeros(len(TIMES))
-    total = np.full(len(TIMES), 100.0)
-    for ax, name in zip(axes.ravel(), order):
-        c = sims[name]
-        vals = {k: np.array([c[yr][k] / TOTAL_INJECTED * 100 for yr in TIMES])
-                for k in cats}
-        bottom = np.zeros(len(TIMES))
-        for k, lab, col in zip(cats, labels, colors):
-            ax.fill_between(TIMES, bottom, bottom + vals[k],
-                            label=lab, color=col, alpha=0.85)
-            bottom = bottom + vals[k]
-        # unreported wedge
-        ax.fill_between(TIMES, bottom, total, label="Outside boxes A/B",
-                        color="0.82", alpha=0.9, hatch="///")
-        ax.set_title(name)
-        ax.set_xlim(50, 1000); ax.set_xscale("log")
-        ax.set_xticks(TIMES); ax.set_xticklabels([str(t) for t in TIMES])
-        ax.set_ylim(0, 100)
-    for ax in axes[:, 0]:
-        ax.set_ylabel("Fraction of injected CO$_2$ (%)")
-    for ax in axes[1, :]:
-        ax.set_xlabel("Time after injection start (yr)")
-    handles, labels_ = axes.ravel()[0].get_legend_handles_labels()
-    fig.legend(handles, labels_, loc="lower center", ncol=5, frameon=False,
-               bbox_to_anchor=(0.5, -0.02))
-    fig.suptitle("SPE11b CO$_2$ inventory by compartment", y=1.02, fontsize=10)
-    fig.savefig(os.path.join(FIGS, "fig1_compartments.png"))
-    plt.close(fig)
-
-# ---------------------------------------------------------------------------
-# Figure 2: E_s vs PVI
-# ---------------------------------------------------------------------------
-def fig2():
-    pvi = np.linspace(0.005, 0.15, 200)
-    V = dykstra_parsons_from_lognormal([k_md(f[1]) for f in FACIES if f[3] == "reservoir"])[0]
-    fig, ax = plt.subplots(figsize=(4.6, 3.6))
-    for phi, ls, col in [(0.20, "-", "#2b6cb0"), (0.25, "--", "#2f855a")]:
-        ax.plot(pvi, [shook_mitchell_E_s(0.0, p, phi) for p in pvi],
-                ls=ls, color=col, lw=2,
-                label=f"homogeneous, $\\phi$={phi:.2f}")
-        ax.plot(pvi, [shook_mitchell_E_s(V, p, phi) for p in pvi],
-                ls=ls, color=col, lw=2, alpha=0.45,
-                label=f"V$_\\mathrm{{DP}}$={V:.2f}, $\\phi$={phi:.2f}")
-    ax.set_xlabel("Pore volumes injected (PVI)")
-    ax.set_ylabel("Sweep efficiency $E_s$")
-    ax.set_xlim(0, 0.15); ax.set_ylim(0, 1)
-    ax.legend(frameon=False)
-    ax.set_title("Shook–Mitchell sweep efficiency")
-    fig.savefig(os.path.join(FIGS, "fig2_sweep_vs_pvi.png"))
-    plt.close(fig)
-
-# ---------------------------------------------------------------------------
-# Figure 3: V_DP sensitivity
-# ---------------------------------------------------------------------------
-def fig3():
-    Vgrid = np.linspace(0.0, 0.85, 200)
-    pvi, phi = 0.05, 0.20
-    NTG, kh_kv, M = 0.85, 10.0, 10.0   # documented assumptions
-    es = [shook_mitchell_E_s(v, pvi, phi) for v in Vgrid]
-    ec = [kopp_E_c(v, pvi, phi, NTG, kh_kv, M) for v in Vgrid]
-    fig, ax = plt.subplots(figsize=(4.6, 3.6))
-    ax.plot(Vgrid, es, lw=2, color="#2b6cb0", label="$E_s$ (sweep)")
-    ax.plot(Vgrid, ec, lw=2, color="#9b2c2c", label="$E_c$ (Kopp)")
-    ax.axvline(0.66, ls=":", color="0.4", lw=1)
-    ax.text(0.67, 0.55, "SPE11b\n$V_{DP}{=}0.66$", fontsize=7)
-    ax.set_xlabel("Dykstra–Parsons coefficient $V_{DP}$")
-    ax.set_ylabel("Efficiency factor")
-    ax.set_xlim(0, 0.85); ax.set_ylim(0, 0.6)
-    ax.legend(frameon=False)
-    ax.set_title("Heterogeneity reduces sweep and capacity "
-                 "(PVI = 0.05, $\\phi$ = 0.20)")
-    fig.savefig(os.path.join(FIGS, "fig3_vdp_sensitivity.png"))
-    plt.close(fig)
+def fig3_regime():
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8.0, 3.6))
+    # (a) governing timescales
+    labels = ["buoyant rise\nof full 1200 m", "injection\nduration", "post-injection\nmonitoring"]
+    vals = [t_grav / (365*86400), T_INJ / (365*86400), (T_MONITOR - T_INJ) / (365*86400)]
+    cols = ["#c0392b", "#2b6cb0", "#95a5a6"]
+    ax1.barh(labels, vals, color=cols)
+    ax1.set_xscale("log"); ax1.set_xlim(1, 3000)
+    ax1.set_xlabel("Timescale (yr, log)")
+    for i, v in enumerate(vals):
+        ax1.text(v * 1.3, i, f"{v:.0f} yr", va="center", fontsize=8)
+    ax1.set_title("Gravity and injection are co-active")
+    # (b) seal capillary-gravity balance
+    h = np.linspace(0, 250, 100)
+    buoy = DELTA_RHO * G * h / 1e6
+    ax2.plot(h, buoy, color="#c0392b", lw=2, label="buoyancy head")
+    ax2.axhline(P_ENTRY / 1e6, color="#2b6cb0", ls="--", lw=2, label="seal entry pressure")
+    hb = P_ENTRY / (DELTA_RHO * G)
+    ax2.axvline(hb, color="0.6", ls=":", lw=1)
+    ax2.text(hb + 5, 0.35, f"breach\n\u2248{hb:.0f} m", fontsize=7)
+    ax2.set_xlabel("CO\u2082 column height (m)")
+    ax2.set_ylabel("Pressure (MPa)")
+    ax2.set_xlim(0, 250); ax2.set_ylim(0, 0.45)
+    ax2.legend(frameon=False, fontsize=7.5)
+    ax2.set_title("Seal holds \u2248200 m, not the full 1200 m")
+    fig.suptitle("SPE11b dimensionless regime", y=1.02)
+    fig.tight_layout()
+    fig.savefig(os.path.join(FIGS, "fig3_regime.png")); plt.close(fig)
 
 if __name__ == "__main__":
-    fig1(); fig2(); fig3()
-    print("wrote to", FIGS)
-    for f in sorted(os.listdir(FIGS)):
-        print("  ", f)
+    fig1_agreement(); fig2_plume(); fig3_regime()
+    print("figures written to", FIGS)
