@@ -106,18 +106,23 @@ log-standard-deviation below the median. V_DP ranges from 0 (homogeneous) to val
 approaching 1 (extreme heterogeneity). In Section 4.2 we estimate σ_ln directly from the
 SPE11b facies table.
 
-### 2.2 Shook–Mitchell sweep efficiency
+### 2.2 Shook–Mitchell sweep efficiency (empirical screening adaptation)
 
-Shook and Mitchell (2009) express sweep efficiency through a Formation Quality Index
-(FQI); in their formulation, and as implemented here,
+We follow the empirical screening adaptation of Shook and Mitchell (2009). A Formation
+Quality Index (FQI) is defined, and the sweep efficiency is expressed as a closed-form
+exponential surrogate fitted to reproduce the breakthrough behaviour of the
+Shook–Mitchell heterogeneity framework:
 
     FQI = √(1/(1−V)) · (1−V)/φ                              (2)
     E_s = 1 − exp(−3 · PVI · FQI)                            (3)
 
 with the homogeneous limit E_s = 1 − exp(−3·PVI/φ) at V = 0. Here PVI is the pore volumes
-injected and φ the porosity. E_s is a *volumetric* metric: the fraction of accessible pore
-volume contacted, hence a proxy for the fraction of the reservoir that can participate in
-residual and capillary trapping.
+injected and φ the porosity. The exponential form (and its coefficient 3) is a conventional
+screening approximation rather than an equation derived in Shook and Mitchell (2009)
+themselves; it is used here for tractability and is flagged as such in the accompanying
+code. E_s is a *volumetric* metric: the fraction of accessible pore volume contacted,
+hence a proxy for the fraction of the reservoir that can participate in residual and
+capillary trapping.
 
 ### 2.3 Kopp et al. storage efficiency
 
@@ -343,11 +348,18 @@ clearly-scoped piece of future work.
 
 The near-absence of residual trapping in SPE11b at end of injection is worth emphasis for
 practitioners. Much screening guidance inherits the waterflood intuition that a significant
-fraction of the injected phase is residually trapped. At the field conditions of SPE11b —
-deep, warm, low-viscosity supercritical CO₂ with strong gravity segregation into a
-structural high — the immobile fraction is negligible, and dissolution plus structural
-trapping dominate. Screening tools should therefore weight these mechanisms, not residual
-trapping, when assessing long-term security for analogues of this benchmark.
+fraction of the injected phase is residually trapped. The physical reason that intuition
+fails here is drainage-versus-imbibition hysteresis: during the 50-year active injection
+the reservoir undergoes continuous **primary drainage** — the non-wetting CO₂ advancing
+into an initially water-saturated medium — during which no residual gas is trapped; an
+immobile CO₂ phase only appears once brine re-enters the swept region after shut-in, i.e.
+during post-shut-in **imbibition**. The benchmark's reported immobile fraction (<0.1% at
+50 yr) indicates this imbibition has barely begun within the reporting boxes at end of
+injection. Combined with the deep, warm, low-viscosity supercritical-CO₂ conditions and
+strong gravity segregation into a structural high, this leaves dissolution and structural
+trapping as the dominant long-term mechanisms. Screening tools should therefore weight
+these mechanisms — not residual trapping — when assessing long-term security for analogues
+of this benchmark.
 
 ### 5.4 Limitations
 
@@ -418,7 +430,15 @@ demonstrations.
 
 ## Data and code availability
 
-All scripts and data are provided in this repository under `scripts/`, `data/` and
+A live, self-contained Jupyter notebook reproducing every result and figure in this paper
+is available at **https://github.com/todak2000/co2-heterogeneity-screening**, where it can
+be run interactively without installation via its Binder or Google Colab launcher:
+
+- *Notebook:* `heterogeneity_screening.ipynb`
+- *Binder:* https://mybinder.org/v2/gh/todak2000/co2-heterogeneity-screening/HEAD?labpath=heterogeneity_screening.ipynb
+- *Colab:* https://colab.research.google.com/github/todak2000/co2-heterogeneity-screening/blob/main/heterogeneity_screening.ipynb
+
+All scripts and data are also provided in that repository under `scripts/`, `data/` and
 `figures/`.
 - `scripts/facies_heterogeneity.py` — facies, V_DP and E_s/E_c computation.
 - `scripts/benchmark_analysis.py` — SPE11b compartment inventory from the time series.

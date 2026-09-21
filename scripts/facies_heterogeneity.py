@@ -65,11 +65,13 @@ def dykstra_parsons_from_lognormal(k_values_md):
     return V, sigma_ln, mean
 
 # ---------------------------------------------------------------------------
-# 3. Shook & Mitchell (2009) sweep efficiency, as presented in the paper.
-#    E_s(V, PVI) = 1 - exp(-3 * PVI * FQI),
-#    FQI = sqrt(1/(1-V)) * (1-V) / phi   for V > 0,
-#    and the homogeneous limit E_s = 1 - exp(-3 PVI / phi).
-#    (Clamped to [0,1].)
+# 3. Shook & Mitchell (2009) sweep efficiency — EMPIRICAL SCREENING ADAPTATION.
+#    Shook & Mitchell define dynamic heterogeneity/flow-capacity curves; the closed
+#    form used here,
+#       E_s = 1 - exp(-3 * PVI * FQI),   FQI = sqrt(1/(1-V)) * (1-V)/phi,
+#    is a conventional exponential surrogate fitted to reproduce their breakthrough
+#    behaviour, not an equation derived in their paper. The coefficient "3" is part
+#    of that surrogate. Flagged in Section 2.2 of the manuscript.
 # ---------------------------------------------------------------------------
 
 def shook_mitchell_E_s(V, pvi, phi):
