@@ -1,0 +1,1548 @@
+The 11th
+Society of Petroleum Engineers
+Comparative Solution Project: Problem
+Definition
+Jan M. Nordbotten1, Martin A. Fernø2, Bernd Flemisch3, Anthony R. Kovscek4, Knut-Andreas Lie5
+
+
+          Please refer to the official version, published as:
+
+          Nordbotten, Jan M., Fernø, Martin A., Flemisch, Bernd, Kovscek, Anthony R., and
+          Knut-Andreas Lie. "The 11th Society of Petroleum Engineers Comparative Solution
+          Project: Problem Definition" SPE J. (2024). https://doi.org/10.2118/218015-PA
+
+
+
+
+Abstract
+This document contains the description of, and call for participation in, the 11th Society of Petroleum
+Engineers Comparative Solution Project (the 11th SPE CSP, https://spe.org/csp). It is motivated by the
+simulation challenges associated with CO2 storage operations in geological settings of realistic
+complexity. The 11th SPE CSP contains three versions: Version 11A is a 2D geometry at the laboratory
+scale, inspired by a recent CO2 storage forecasting and validation study. For Version 11B, the 2D
+geometry and operational conditions from 11A are rescaled to field conditions characteristic of the
+Norwegian Continental Shelf. Finally, for Version 11C, the geometry of Version 11B is extruded to a full
+3D field model. The CSP has a two-year timeline, being launched at the 2023 SPE Reservoir Simulation
+Conference, and culminating at the 2025 SPE Reservoir Simulation Conference. A community effort is
+run in parallel to develop utility scripts and input files for common simulators to lower the threshold
+of participation; see link to supplementary material on the CSP website. At the time of writing,
+complete input decks for one simulator are already ready for all three versions.
+
+
+
+
+1
+  Department of Mathematics, University of Bergen; Norwegian Research Center (NORCE), Bergen
+2
+  Department of Physics and Technology, University of Bergen; Norwegian Research Center (NORCE), Bergen
+3
+  Institute for Modelling Hydraulic and Environmental Systems, University of Stuttgart
+4
+  Energy Science & Engineering, Stanford University
+5
+  SINTEF Digital, Mathematics & Cybernetics, Oslo
+                                                     1
+Figure 1: Illustration figure containing a collage of a laboratory experiment (left, see Fernø et al., 2023) and a
+numerical simulation (right, see Saló-Salgado et al., 2023) on the same geometry as SPE CSP 11A.
+
+
+    1. Introduction
+Safe and efficient implementation of geological carbon storage (GCS) necessarily relies on reservoir
+simulators applied to uncertain geological data. While the strengths and limitations of reservoir
+simulation are well appreciated within petroleum production, GCS raises new challenges both in terms
+of physical processes and timescales. As an example, the enhancement of dissolution from a CO2-rich
+supercritical phase to the aqueous phase through convective mixing ensures important long-term
+storage security, relevant on timescales from decades to centuries.
+
+One consequence of the relative youth of the GCS industry, combined with the long timescales and
+new physical processes of interest, is that available field data for validation of simulation technology is
+still rare. This increases the importance of validation against proxy systems, and code verification
+through comprehensive benchmarking efforts among simulators.
+
+
+
+1.1 Background and motivation
+During 2021-2022, three of the present organizers lead a forecasting and validation study within the
+academic GCS community (Nordbotten et al., 2022; Flemisch et al., 2023), as illustrated in Figure 1. The
+primary intent was to validate the long-term performance of numerical simulators for GCS, with
+particular emphasis on the post-injection period, and to assess the ability to state accurately well-
+calibrated forecasting intervals. The study also revealed several numerical challenges, both in terms of
+numerical accuracy when resolving the reservoir dynamics, and in terms of obtaining good solver
+performance (see e.g., Flemisch et al (2023), Salo-Salgado et al (2023), Green et al (2023) and
+Wapperom et al (2023)).
+
+Separately, the development of numerical simulation capabilities for subsurface applications has
+historically benefited substantially from common reference simulation cases, notably the series of 10
+Comparative Solution Projects (CSP) organized within the Society of Petroleum Engineers (SPE)
+between 1981 and 2001 (see Islam and Sepehrnoori (2013) for a review). These observations provided
+the initial motivation for developing a set of benchmark cases for CO2 storage within the concept of a
+new SPE Comparative Solution Project (CSP).
+
+In developing this 11th SPE CSP (https://spe.org/csp), we hope to provide a common platform and
+reference case for numerical simulation of GCS. Specifically, we anticipate that the following topics
+are discussed relative to this baseline.
+
+                                                        2
+    •   Development and verification of accurate and efficient discretization methods for multiphase,
+        multicomponent flow and transport.
+    •   Development and verification of space-time adaptive gridding and domain decomposition
+        methods.
+    •   Development of upscaling methods for convective mixing and dispersion of in the context of
+        CO2 dissolution into water.
+    •   Development and verification of robust and efficient linear and non-linear solvers and solution
+        and time-stepping strategies for 2D and 3D at laboratory and field conditions.
+    •   Assessment of the importance of physical processes omitted from this study, including (but
+        not limited to) geochemical reactions, mechanical response, and more realistic boundary
+        conditions.
+
+Furthermore, as of the date of launching this CSP, we do not anticipate that a fully converged solution
+(in the sense of grid refinement) will be achievable for any of the three versions of the CSP by means
+of standard numerical methods on desktop hardware. This anticipation is justified in part based on the
+experiences from the previous academic benchmark cited above, and in part due to the known
+challenges associated with accurately simulating the dissolution and convective mixing of CO2 into
+water, in particular outside the context of trivial geometries, see e.g., Pau et al. (2010). As such,
+providing a reference solution to this CSP is a challenge in itself, that will likely require advanced
+methods and high-performance computing.
+
+
+
+1.2 Comparative Solution Project overview
+This 11th SPE CSP (https://spe.org/csp) is based around a synthetic geological cross-section,
+representative of the structures found in the Norwegian Continental Shelf. The cross-section is defined
+in terms of seven facies and is used to realize three versions of the CSP: Version 11A is defined as a 2D
+experiment at laboratory scale and surface conditions. Version 11B is defined as a 2D transect at field
+scale and conditions. Version 11C is a 3D extrusion of version 11B, thus corresponding to a full synthetic
+field study. The three versions 11A, 11B and 11C all contain different challenges, and should not be
+considered to be of increasing difficulty. Indeed, many may find Version 11B to be the easiest, and we
+recommend starting with this case.
+
+A common 2D transect geometry is utilized for all three versions of the CSP and is designed to strike a
+balance between a) simplicity of definition, b) geological and operational realism, and c) providing
+several key computational challenges associated with numerical simulation of CO2 injection, migration,
+and long-term storage in water-filled porous media.
+
+We recognize that to provide a successful CSP, a balance needs to be attained between including a
+maximum amount of geological, operational, and physical realism versus a CSP that can be well
+addressed by a broad spectrum of the community. Such considerations permeate the whole
+development of this CSP, and some of our main considerations are highlighted as follows.
+
+    •   Geologic realism: Our goal has been to provide a geometry that is easy to understand and
+        implement, while at the same time conceptually corresponds to a realistic geological formation
+        in the Norwegian Continental Shelf. We have chosen to address this by using a common 2D
+        transect in all three versions of the CSP, that itself was designed to balance complexity with
+        computational addressability. This 2D transect is then stretched, extruded, and deformed
+        between the three variants of the CSP.
+    •   Heterogeneity: We have chosen to emphasize structural heterogeneity (facies and faults) over
+        local-scale heterogeneity. This choice is justified by two considerations. Firstly, local-scale
+        heterogeneity is covered by the 10th SPE CSP. Secondly, we wish to have a CSP that in principle
+
+                                                    3
+        has a computable solution and can be reasonably well approximated by the majority of current
+        simulators, that would be prohibitive with fine-scale (or stochastic) heterogeneities.
+    •   Fluid complexity and geochemistry: We have chosen to specify two-phase, two-component
+        flow with thermal effects (Versions 11B and 11C only). This corresponds to pure water in the
+        reservoir, with pure CO2 injection. The omission of salts and other minerals in the system is in
+        part due to the relatively poor characterization of the properties of brine-CO2 mixtures in the
+        literature, and to avoid modeling permeability as a function of salt precipitation and other
+        geochemical processes. These choices substantially simplify the problem definition. The
+        inclusion of thermal effects is an acknowledgment that CO2 may frequently be injected at a
+        temperature significantly below the reservoir temperature.
+    •   Geomechanics: Geomechanics is not included in the CSP based on two arguments. Firstly, the
+        fluid-mechanical coupling is primarily a total pressure coupling, and we thus consider the
+        multi-phase flow processes to be a somewhat orthogonal challenge to poromechanics. As
+        such, we believe they can be to a large extent studied separately. Secondly, we acknowledge
+        that a substantial fraction of available reservoir simulators do not include a native coupling to
+        mechanical response, and wish that the CSP should also be open also to these participants.
+    •   Petrophysical processes: After careful consideration, we have chosen to include capillary
+        forces and dispersion in the description, but not relative permeability hysteresis. We justify
+        this choice as we consider capillary forces and dispersion to have greater conceptual
+        importance as they represent important terms in the governing equation during injection and
+        post-injection, respectively, and as they are necessary for a grid-converged solution to exist.
+        On the other hand, hysteresis is of lesser conceptual importance as it is a modification of
+        existing constitutive laws.
+
+The choices just described will invariably exclude active research and development interests of many
+members of the community, and we therefore emphasize that this CSP is meant to be used as a
+common baseline, from which the incorporation of additional complexities, not included in the CSP, is
+more than welcome.
+
+Both the injection protocol, as well as the target quantities for the simulation, are defined with
+operational realism in mind. In particular, simulation results are to be reported both in terms of spatial
+maps of the field variables (pressure, saturation, phase composition, and for versions 11B and 11C also
+temperature). Furthermore, we request target quantities that represent proxies for assessing the long-
+term security of carbon storage. These are motivated by the following key questions and variables,
+made precise in Sections 2.5. and 2.6:
+
+
+
+    P1. As a proxy for assessing risk of mechanical disturbance of the overburden: Time evolution of
+        pressure at two observation points.
+
+    P2. As a proxy for when leakage risk starts declining and our ability to simulate accurately phase
+        partitioning: Time evolution of phase partitioning of CO2 within a region covering the primary
+        storage dome.
+
+    P3. As a proxy for our ability to handle more complex geological features: Time evolution of phase
+        partitioning of CO2 within a region covering a secondary storage dome.
+
+    P4. As a proxy for our ability to capture onset of convective mixing: Time evolution of a measure
+        of density-driven fingers in a region below the gas-water interface of the primary storage
+        dome.
+
+
+
+                                                    4
+    P5. As a proxy for our ability to capture migration into low-permeable seals: Time evolution of the
+        total mass of CO2 in the seal facies.
+
+
+
+1.3 Community resources
+The current document constitutes the official CSP description. The development of this description has
+been paired with an ongoing community effort to develop utilities that lower the threshold for
+participation. This community effort is hosted at https://github.com/Simulation-Benchmarks/11thSPE-
+CSP, and at the time of writing contains:
+
+    •   Geometry files and scripts for producing structured meshes for all versions of the CSP.
+    •   Scripts for generating thermodynamic tables based on the NIST database.
+
+Sample input files for common simulators are in development, and corresponding input decks for one
+simulator are already available for all three versions of the CSP. We emphasize that the input decks are
+intended to support the participants in setting up their computational workflows. Especially, the
+contained grids are expected to be optimized by the participants for generating their respective CSP
+results.
+
+
+
+1.4 Call for participation and timeline
+Participation in this 11th SPE CSP is open to all interested parties, subject to the condition that the
+agreement of participation must be completed, signed, and submitted by December 1st, 2023.
+
+The CSP is planned according to a 2-year cycle, with tentative milestones as follows:
+
+    •   March 29, 2023: Official announcement of the 11th SPE CSP at the 2023 SPE Reservoir
+        Simulation Conference, Galveston, Texas.
+    •   October 1, 2023: Final date for publication of corrections or amendments to the CSP
+        description (this document).
+    •   October 16-18, 2023: Special session at SPE Annual Technical Conference and Exhibition
+        (ATCE).
+    •   December 1, 2023: Open call for participation period ends.
+    •   March 1, 2024: Deadline for submission of early CSP simulation results.
+    •   March 2024: First intercomparison workshop for all CSP participants (virtual).
+    •   September 1, 2024: Deadline for submission of final CSP simulation results.
+    •   September 2024: Final intercomparison workshop for all CSP participants (hybrid).
+    •   December 2024: Completion of draft report on the results of the CSP.
+    •   February 2025: Report on the results of the CSP finalized and submitted.
+    •   March 2025: Special session at the 2025 SPE Reservoir Simulation Conference.
+
+
+
+1.5 Early Access Team
+The authors would like to thank and acknowledge the contributions of the “Early Access Team”:
+
+    •   Norwegian Research Center (NORCE): Tor Harald Sandve and David Landa Marban
+    •   SINTEF Digital: Halvor Møll Nilsen, Odd Andersen, Olav Møyner and Vetle Nevland
+    •   SLB: Marie Ann Giddins and Jarle Haukås
+    •   Stuttgart University: Holger Class, Dennis Gläser and Kai Wendel
+
+
+                                                   5
+The early access team has supported the development of the CSP through giving feedback on the CSP
+description, quality control of the proposed versions of the CSP, and providing supporting material in
+the form of example computational grids and run files. This team also formed the initial core of the
+community developing the resources mentioned in Section 1.3.
+
+
+
+    2. Technical description CSP 11A
+The CSP 11A is a 2D geometry, set at laboratory scale and conditions. Version 11A is closely inspired
+by an actual CO2 storage lab experiment, and as such there is an actual physical solution that
+provides insight into the general system behavior (Fernø et al, 2023). The distribution of gas-phase
+CO2 and dissolved CO2 at the end of injection can be seen in Figure 2.
+
+Attempting to reproduce actual CO2 storage experiments in silico is important to assess the
+predictive capabilities of simulators. The experiment underlying CSP 11A was conducted at
+atmospheric conditions and this introduces challenges that will not necessarily be seen in simulations
+conducted at reservoir conditions, including large density differences between CO2 and brine and
+diffusion being a determining factor for the onset and wavelength of the viscous fingers, as discussed
+in more detail by Wapperom et al. (2023). Version 11A will likely prove to be more difficult to
+simulate than Version 11B, and even though we describe most of the general setup of the CSP for
+Version 11A, we recommend Version 11B as a starting point for most participants.
+
+
+
+
+Figure 2: Image of physical lab-scale CO2 storage experiment after about five hours, with contours of regions
+with mobile gas (yellow) and dissolved CO2 (green) overlain, from Fernø et al (2023).
+
+    2.1 Governing equations and constitutive laws
+As governing equations, we state the standard isothermal two-phase, two-component extension of
+Darcy’s law. For a detailed description, refer to Nordbotten & Celia (2011) or Lake et al. (2014); the
+main equations are summarized below. We emphasize that all parameters and constitutive functions
+are defined as constant within each facies (see the geometry description in the next section and
+parameters in Section 2.3).
+
+Multi-phase Darcy’s law for phases 𝛼 = 𝑛 (CO2-rich non-wetting gas phase), and 𝛼 = 𝑤 (H2O-rich
+wetting liquid phase):
+                                                  𝑘𝑟,𝛼 𝒌                                             (2.1)
+                                        𝒖𝜶 = −           (𝛁𝑝𝛼 − 𝜌𝛼 𝒈)
+                                                   𝜇𝛼
+
+                                                       6
+Here, 𝒖𝜶 is the volumetric flux of phase 𝛼, 𝑝𝛼 is the phase pressure, 𝑘𝑟,𝛼 and 𝒌 are the relative and
+intrinsic permeabilities, respectively, 𝜇𝛼 is the phase viscosity, 𝜌𝛼 is the phase density, and 𝒈 is the
+gravitational force, defined with three significant digits, |𝒈| = 9.81 ms−2 , pointing “down”.
+
+Component mass conservation for components 𝑖 = CO2 and 𝑖 = H2 O:
+
+                              𝜕(𝜌𝛼 𝜙𝑠𝛼 𝜒𝛼𝑖 𝐽)                                                   (2.2)
+                           ∑ [                + 𝛁 ∙ (𝜌𝛼 𝒖α 𝜒𝛼𝑖 + 𝜌𝛼 𝒋𝑖𝛼 )] = 0
+                                   𝜕𝑡
+                          𝛼=𝑤,𝑛
+Here, 𝜙 is the porosity, 𝜒𝛼𝑖 is the component mass fraction in phase 𝛼, 𝑡 is the time variable and 𝒋𝑖𝛼 is
+the sum of diffusive and dispersive fluxes. Finally, 𝐽 is a volumetric density term (i.e., reservoir volume
+per domain volume), that is used for adding volume to boundaries for CSP 11B and 11C. For this
+section, CSP 11A, 𝐽 = 1, and can be omitted from the equations.
+
+Diffusive and dispersive flux for component 𝑖 in phase 𝛼:
+
+                                     𝒋𝑖𝛼 = −(𝑠𝛼 𝜙𝐷𝛼 + 𝐸|𝒖𝛼 |)∇𝜒𝛼𝑖                               (2.3)
+Here 𝐷𝛼 is the mutual diffusivity in phase 𝛼, while 𝐸|𝒖𝛼 | is a linear and dispersion model, with isotropic
+dispersivity 𝐸. The diffusive and dispersive fluxes are discussed in more detail in Section 5.3.
+
+Capillary pressure: The phase pressures are related depending on saturation:
+
+                                          𝑝𝑛 − 𝑝𝑤 = 𝑝cap (𝑠𝑤 )                                  (2.4)
+Completeness of model: For phases 𝛼 = 𝑛, 𝑤 and components 𝑖 = CO2 , H2 O:
+
+                                ∑𝛼=𝑤,𝑛 𝑠𝛼 = 1 and ∑𝑖=CO2 ,H2 O 𝜒𝛼𝑖 = 1                          (2.5)
+
+
+In addition to the governing equations provided above, the following constitutive laws are considered.
+
+Brooks-Corey type relative permeability and capillary pressure: For primary drainage (initial period of
+injected gas displacing water) we consider normalized saturations:
+
+                     𝑠𝑤,𝑛 = max ( 𝑤
+                                    𝑠 −𝑠𝑤,imm
+                                                , 0) and 𝑠𝑛,𝑛 = max ( 𝑛
+                                                                       𝑠 −𝑠𝑛,imm
+                                                                                   , 0)         (2.6)
+                                    1−𝑠𝑤,imm                           1−𝑠𝑛,imm
+where 𝑠𝛼,imm is the saturation below which the phase is immobile. The relative permeability is given
+as a unique function of saturation by:
+                                                               𝑐𝛼,1
+                                          𝑘𝑟,𝛼 (𝑠𝛼 ) = (𝑠𝛼,𝑛 )                                  (2.7)
+Here, the exponents 𝑐𝛼,1 determine the non-linearity of the relative permeability. Similarly, the basic
+Brooks-Corey capillary pressure is given by:
+                                                                     1                       (2.8)
+                                                                   −
+                                     𝑝̃cap (𝑠𝑤 ) = 𝑝entry ⋅ (𝑠𝑤,𝑛 ) 𝑐2
+Here, 𝑝𝑒𝑛𝑡𝑟𝑦 is the entry pressure for the rock. We remark that capillary pressure is only physically
+meaningful when the phases are connected. For non-wetting saturations less than 𝑠𝑛,𝑖𝑚𝑚 , the phase
+will exist as disconnected bubbles of various radii, and thus a unique non-wetting pressure may not
+exist. This has no impact on the flow calculations (because the non-wetting phase relative permeability
+is zero), but this will impact thermodynamical calculations. For this CSP, we resolve this issue by
+defining an extended capillary pressure, valid for all saturations, as:
+
+                                                          𝑝̃cap (𝑠𝑤 ) √𝜋                  (2.9)
+                               𝑝cap (𝑠𝑤 ) = 𝑝cap,max ⋅ erf (             )
+                                                           𝑝cap,max 2
+Here, 𝑝cap,max defines a maximum capillary pressure, while the error function ensures a smooth
+transition of the capillary pressure function to the maximum value. For completeness, we emphasize
+
+                                                     7
+that as the error function is defined as the integral of the normal distribution, it is well-defined at
+infinity: erf(∞) = 1. Capillary pressure-saturation relationships are illustrated in Section 2.3 and
+discussed in more detail in Section 5.1 and 5.4.
+
+Thermodynamics: The description of the thermodynamics is split into three parts: Phase partitioning,
+pure-phase properties, and mixture properties.
+
+      1) We define the phase partitioning of the pure CO2-H2O system according to Spycher, Pruess and
+         Ennis-King (2003); see in particular section 4.3 and Tables 1 and 2 therein. To be precise, we
+         emphasize that for the purpose of this CSP, the solubility limits of each phase (i.e. CO2 solubility
+         limit in the water-rich wetting phase and H2O solubility limit in the CO2-rich non-wetting phase)
+         should be calculated based on the pressure of the same phase. Mass transfer between phases
+         is assumed to be instantaneous at each point, immediately dissolving/vaporizing available CO2
+         and H2O until the solubility limit is reached.
+      2) The pure-phase CO2 and H2O properties are defined according to the NIST database, see
+         https://webbook.nist.gov/chemistry/fluid/, (Lemmon et al., 2023). The respective phase
+         pressure is used when evaluating the pure phase properties.
+      3) For the range of conditions considered herein, the mutual solubilities are quite small.
+         Consequently, all mixture properties are considered as equal to that of the pure phase except
+         for water density, which takes the form (Garcia, 2001):
+                                                                CO        CO                        (2.10)
+                                           1              1 − 𝜒𝑤 2      𝜒𝑤 2
+                                                CO
+                                                       =             +
+                                   𝜌𝑤 (𝑝𝑤 , 𝑇, 𝜒𝑤 2 ) 𝜌𝑤 (𝑝𝑤 , 𝑇) 𝜌𝑛,𝜙 (𝑇)
+                                            CO                                        CO
+           In this expression, 𝜌𝑤 (𝑝𝑤 , 𝑇, 𝜒𝑤 2 ) is the density of water containing 𝜒𝑤 2 , while 𝜌𝑤 (𝑝𝑤 , 𝑇) is
+           the pure-phase properties discussed in point 2) above. Finally, 𝜌𝑛,𝜙 (𝑇) is the apparent density
+           of CO2 dissolved in water (defined as 𝜌𝑛,𝜙 (𝑇) = 𝑀2 /𝑉𝜙 in the notation of Garcia (2001)). This
+           quantity is specified in Eq. (3) of Garcia (2001) and parameterized therein as:
+
+              𝑉𝜙 = 10−6 ⋅ (37.51 − 9.585 ⋅ 10−2 𝑇 + 8.74 ⋅ 10−4 𝑇 2 − 5.044 ⋅ 10−7 𝑇 3 )             (2.11)
+           where temperatures are measured in Celsius, and the molar weight of CO2 is 𝑀2 = 44.01 ⋅
+           10−3 kg/mol. The gas density as well as both phase viscosities are unaffected by their
+           composition.
+
+Rock compressibility: The rock is considered incompressible, thus 𝜙 does not vary over time.
+
+
+
+      2.2 Geometry, boundary, and initial conditions
+The geometric description is motivated by laboratory experiments relevant for North Sea storage
+formations and has been developed in consultation with faculty and researchers at the Department of
+Earth Science, University of Bergen6 The geometry presented here is a simplification of the geometry
+defined in Nordbotten et al. (2022).
+
+The length of the porous medium is 2.8 m and height is 1.2 m. Version 11A of the CSP is 2D, but in
+order to present quantities in common units of “mass per volume”, we consider a uniform depth in the
+third dimension of 0.01 m. The porous domain consists of the full porous medium, except for the two
+injection wells, as specified below.
+
+
+
+
+6
+    A special thanks goes to Robert Gawthorpe, Atle Rotevatn and Casey Nixon for their helpful comments.
+                                                        8
+Figure 3: A sketch of the benchmark geometry. The geometry includes an anticline (right side) where CO 2
+accumulation is anticipated. There are three fault-like structures in the geometry, with different permeability
+(two high and one low). The lower fault (left side) is heterogeneous and consists of several facies. The upper-left
+fault is a homogeneous sealing fault. The upper-right fault is homogeneous consisting of a single facies. There
+are two CO2 injection wells (blue circles), and pressure observation points (POPs, red circles) with locations given
+in the text. Box A, B and C indicated in the figure correspond to regions of interest motivated in Section 1.2, and
+further detailed in Section 2.5, with positions defined in the text. The facies are identified by colors, and further
+detailed in Section 2.3.
+
+Figure 3 provides a sketch of the geometry; a precise definition is given in the gmesh-compatible file
+spe11a.geo, available as part of the benchmark description7. As evident from the figure, the
+geometry contains seven facies, all of which are considered to be internally homogeneous. The facies
+properties are given in the next section.
+
+The figure contains three boxes that are used for reporting. Their (𝑥, 𝑧) coordinates are measured
+relative to the lower left corner of the domain and are specified in terms of their bottom left and top
+right corners:
+
+          Box A: Bottom left (1.1, 0.0), top right (2.8, 0.6)
+          Box B: Bottom left (0.0, 0.6), top right (1.1, 1.2)
+          Box C: Bottom left (1.1, 0.1), top right (2.6, 0.4)
+
+The figure also indicates the presence of the two injection wells, with (𝑥, 𝑧) coordinates:
+
+          Well 1: (0.9, 0.3)
+          Well 2: (1.7, 0.7)
+
+Additionally, we consider two Pressure Observation Points (POPs), with (𝑥, 𝑧) coordinates:
+
+          POP 1: (1.5, 0.5)
+          POP 2: (1.7, 1.1)
+
+Temperature: Isothermal conditions of 20° C are considered for CSP 11A.
+
+
+7
+    See GitHub repository: https://github.com/Simulation-Benchmarks/11thSPE-CSP/
+                                                         9
+Boundary conditions: The left, right, and bottom boundaries are impermeable, i.e.:
+
+                                        𝒖𝛼 ⋅ 𝒏 = 0 and 𝒋𝑖𝛼 ⋅ 𝒏 = 0                                      (2.12)
+where 𝒏 is the (outward) normal vector to the boundary.
+
+The top boundary is considered a constant pressure boundary in contact with pure water, i.e.:
+                                                          H O                             (2.13)
+                               𝑝𝑤 = 𝑝𝑤,0 , 𝑠𝑤 = 1 and 𝜒𝑤2 = 1
+Here, 𝑝𝑤,0 is the boundary pressure, defined as 𝑝𝑤,0 = 1.1 ⋅ 105 Pa.
+
+The two injection wells for pure CO2 injection, 𝑗 = 1,2, are also defined as (internal) boundary
+conditions. Both wells are defined to have a radius of 𝑟 = 9 ⋅ 10−4 m, centered at their respective
+coordinates. We refer to the respective well-to-reservoir circular boundaries as Γ𝑖 , where we impose
+the boundary conditions:
+                            CO             𝑄𝑗 (𝑡)                                            (2.14)
+                          𝜒 2𝜌 𝒖 ⋅ 𝒏 =
+                               𝑛    𝑛 𝑛           , 𝒖 ⋅ 𝒏 = 0, 𝒋𝑖 ⋅ 𝒏 = 0
+                                                 2𝜋𝑟         𝑤            𝑤
+Here 𝑄𝑗 (𝑡) are the injection rates per unit depth (injection rate per well length for 11C), specified in
+the section “Operational conditions”. The injection is pure CO2, thus Eq. (2.14) is complemented by:
+
+                                            CO                                                          (2.15)
+                                          𝜒𝑛 2 = 1 if 𝑄𝑗 (𝑡) > 0
+                                          𝒋𝑖𝑛 ⋅ 𝒏 = 0 if 𝑄𝑗 (𝑡) = 0
+
+Initial conditions: The initial conditions represent a water-filled medium at rest, compatible with the
+boundary conditions, i.e.:
+                                                H O                                          (2.16)
+                                      𝑠𝑤 = 1, 𝜒𝑤2 = 1 and 𝒖𝛼 = 0
+
+
+
+2.3 Facies properties
+The geometry contains seven facies: One seal (facies 1), five permeable reservoir sands (facies 2-6) and
+one impermeable (facies 7). These provide the definition of the material properties, as given in Tables
+1 and 2. These properties are consistent with laboratory measured parameters for unconsolidated
+sands (Nordbotten et al., 2022; Fernø et al, 2023).
+
+
+                                         Immobile
+                    Isotropic
+                                          wetting                Gas entry    Diffusion    Diffusion
+                     Intrinsic  Porosity
+                                            phase                pressure     constants    constants
+                  permeability     𝜙
+                                         saturation               𝑝entry       𝐷𝑤           𝐷𝑔
+                       𝒌          [−]
+                                           𝑠𝑤,imm                 [Pa]         [m2 s−1 ]    [m2 s−1 ]
+                       [m2 ]
+                                           [−]
+                           −11
+    Facies 1       4 ⋅ 10        0.44        0.32                  1500         10−9       1.6 ⋅ 10−5
+                           −10
+    Facies 2       5 ⋅ 10        0.43        0.14                   300         10−9       1.6 ⋅ 10−5
+                           −9
+    Facies 3        1 ⋅ 10       0.44        0.12                   100         10−9       1.6 ⋅ 10−5
+                             −9
+    Facies 4       2.0 ⋅ 10      0.45        0.12                   25          10−9       1.6 ⋅ 10−5
+                           −9
+    Facies 5        4 ⋅ 10       0.43        0.12                   10          10−9       1.6 ⋅ 10−5
+                           −8
+    Facies 6        1 ⋅ 10       0.46        0.10                    1          10−9       1.6 ⋅ 10−5
+    Facies 7             0         0         N/A                   N/A           0              0
+Table 1: Properties for 11A that vary between facies.
+
+
+
+
+                                                        10
+ Immobile gas saturation 𝑠𝑛,imm [−]                                                      0.10
+ Max capillary pressure 𝑝cap,max [Pa]                                                  9.5 ⋅ 104
+ Shape exponent capillary pressure 𝑐2 [−]                                                  2
+ Shape exponents relative permeability 𝑐𝛼,1 [−]                                            2
+ Dispersivity 𝐸 [m]                                                                      10−2
+Table 2: Properties for 11A that are equal in all facies.
+
+
+
+We remark that the maximum capillary pressure is chosen to avoid any potential for phase transition
+from water to vapor.
+
+As examples, capillary pressure and relative permeability functions are given in Figure 4.
+
+
+
+
+                                                            11
+Figure 4: Left: Capillary pressure for Facies 1, 3, 4 and 5, as function of wetting saturation. Right: Relative perm
+and fractional flow for Facies 5, also as function of wetting saturation.
+
+
+
+
+2.4 Operational conditions
+CO2 injection protocol:
+                                                                           kg
+    1. CO2 injection in Well 1 with rate 𝑄1 (𝑡) = 1.7 ⋅ 10−5 s m for 0 < 𝑡 ≤ 18000s (continuous
+         injection for 5 hours).
+                                                                      kg
+    2. CO2 injection in Well 2 with rate 𝑄2 (𝑡) = 1.7 ⋅ 10−5 s m for 9000𝑠 < 𝑡 ≤ 18000s (start after
+       2.5 hours, end 2.5 hours later).
+    3. Monitor CO2 flow and transport until final time 𝑡 = 432000s (total run time of 5 days).
+
+We emphasize that to obtain 3D rates, one must multiply by the nominal thickness of the geometry,
+                                                             kg
+thus the injection rates correspond to 1.7 ⋅ 10−7 s . Exemplifying these injection conditions, the
+specified mass rate corresponds to a volumetric rate of about 5 cubic centimeters per minute at 20 °C
+and 1.1 ⋅ 105 Pa.
+
+
+
+2.5 Measurables
+In addition to spatial maps of the field variables, the following measurables shall be reported, details
+of which, including time resolution, are described in Section 2.6. These measurables correspond to
+proxies for the motivating questions in Section 1.2.
+
+2.5.1 Pressure (Proxy P1)
+Pressure shall be reported at each of the two pressure observation points, POP 1 and POP 2 in [Pa].
+
+2.5.2 Phase composition (Proxies P2 and P3)
+The distribution of the CO2-phase shall be reported within boxes labeled A and B in Figure 2. The phase
+distribution (in kg) shall be reported in the following categories: 1. Mobile free phase (CO2 at
+saturations for which the non-wetting relative permeability exceeds 0); 2. immobile free phase (CO2 at
+saturations for which the non-wetting relative permeability equals 0); 3. dissolved (CO2 in water phase)
+and 4. seal (CO2 in any form in facies 1). The sum of the three first categories (mobile, immobile, and
+dissolved) shall equal the total mass of CO2 in the respective box.
+
+
+
+                                                        12
+2.5.3 Convection (Proxy P4)
+For the box labeled Box C in Figure 2, the extent of convective mixing shall be reported as the integral
+of the magnitude of the gradient in relative concentration of dissolved CO2. In other words, given the
+mass-fraction of CO2 in water 𝜒𝑐𝑤 , and the solubility limit is denoted 𝜒𝑐,max
+                                                                         𝑤
+                                                                               , then the following quantity
+𝑀 shall be reported:
+
+                                                           𝜒𝑐𝑤                                     (2.17)
+                                     𝑀(𝑡) ≡ ∫         |∇ ( 𝑤 )| 𝑑𝑉
+                                                Box 𝐶     𝜒𝑐,max
+
+
+This quantity corresponds to the normalized total variation of the concentration field within Box C, and
+(taking into account the nominal depth of the geometry) has units of meters squared.
+
+2.5.4 CO2 in sealing units (Proxy P5)
+Similar as in Section 2.5.2, the total mass of CO2 in all sealing units (CO2 in any form in facies 1) shall be
+reported in kg.
+
+
+
+
+2.6 Data reporting
+All result data will be uploaded by the participants to the dedicated website provided by SPE. An
+account at spe.org is required for the upload process which is described in detail on the website. At
+the end of the CSP, corresponding to the release of the final report, all submitted data will be turned
+public.
+
+The reported data will be analyzed in two respects: Both in terms of an intercomparison of general
+numerical simulation capability (global spatial maps), but also in terms of our ability to correctly assess
+key properties of the system (the measurables outlined in Section 2.5). Consequently, we establish
+both a “dense” and a “sparse” reporting protocol.
+
+Groups are encouraged to submit up to four results, if they deem it interesting, of which at least one
+should be representative of a computation that is reasonable within common reservoir engineering
+practice.
+
+2.6.1 Sparse data
+All measurables identified in Section 2.5 shall be reported at 600s (10-minute) intervals starting at the
+initial injection and lasting 432000s (5 days). The data is expected in csv format in a file
+spe11a_time_series.csv of the form
+# t [s], p1 [Pa], p2 [Pa], mobA [kg], immA [kg], dissA [kg], sealA [kg], <same for
+B>, M_C [m], sealTot [kg]
+0.000e+00, 1.234e+56, 1.234e+56, <…>
+6.000e+02, 1.234e+56, 1.234e+56, <…>
+…
+
+according to the measurables defined in Section 2.5.
+
+2.6.2 Dense data
+A spatial map of all field variables (pressure, saturation, phase composition) shall be reported for each
+hour from injection start. While the computational grids are generated by the participants individually
+and should be chosen by each group as they find most appropriate, for cross-group comparison the
+spatial maps shall be reported relative to a uniform Cartesian grid of 280 by 120 cells (.01 m by .01 m
+grid cells from the bottom of the domain). For each temporal snapshot indicated by H hours, H = 0, 1,
+
+                                                     13
+2, …, cell values should be provided in csv format in a file spe11a_spatial_map_<H>h.csv of
+the form
+# x [m], z [m], pressure [Pa], gas saturation [-], mass fraction of CO2 in liquid [-
+], mass fraction of H20 in vapor [-], phase mass density gas [kg/m3], phase mass
+density water [kg/m3], total mass CO2 [kg]
+5.000e-03, 5.000e-03, 1.234e+56, 1.234e+56, <…>
+1.500e-02, 5.000e-03, 1.234e+56, 1.234e+56, <…>
+…
+2.795e+00, 5.000e-03, 1.234e+56, 1.234e+56, <…>
+5.000e-03, 1.500e-02, 1.234e+56, 1.234e+56, <…>
+1.500e-02, 1.500e-02, 1.234e+56, 1.234e+56, <…>
+… …
+2.785e+00, 1.195e+00, 1.234e+56, 1.234e+56, <…>
+2.795e+00, 1.195e+00, 1.234e+56, 1.234e+56, <…>
+
+The origin of the coordinate system should be located in the lower-left corner with the x-axis positively
+oriented towards the right and the z-axis positively oriented towards the top. (The reported x and y
+values refer to the lower-left corners of each cell in the uniform report grid.) Moreover, note that
+intensive variables (pressure, saturation, and mass fractions) should be reported as cell-center values,
+while extensive variables (total mass) should be reported as integral/average values for the cell.
+
+2.6.3 Performance data
+Reporting of performance data is strongly encouraged to the extent possible, but not mandatory.
+Note that several reporting quantities may not be relevant for certain participating groups,
+depending on their choice of numerical method and solution strategy. Performance data should be
+reported in three categories: As time-series (similar to sparse data in Section 2.6.1), as spatial maps
+(similar to dense data in Section 2.6.2) and as a questionnaire. These are detailed below. The
+participants should stick to the prescribed format, particularly the number of columns in the csv files,
+even if not all requested values can be reported. A missing value should be indicated by n/a.
+
+The participants are encouraged to provide time-series at 600s (10-minute) intervals starting at the
+initial injection and lasting 432000s (5 days). The data is expected in csv format in the repository in a
+file spe11a_performance_time_series.csv of the form
+# t [s], tstep [s], fsteps [-], mass [kg], dof [-], nliter [-], nres [-], liniter [-
+], runtime [s], tlinsol [s]
+0.000e+00, 1.234e+56, 1.234e+56, 1.234e+56, 1.234e+56, <…>
+6.000e+02, 1.234e+56, 1.234e+56, 1.234e+56, 1.234e+56, <…>
+…
+
+The reporting quantities provided as time-series are defined as:
+
+    •   tstep: Average time-step size over the last 600s.
+    •   fsteps: Number of failed time steps over the last 600s.
+    •   mass: Mass balance, i.e., total mass of CO2 in the domain plus any mass that has crossed the
+        boundaries.
+    •   dof: Average number of degrees of freedom per time-step over the last 600s.
+    •   nliter: Total number of non-linear iterations for all time-steps (both failed and converged)
+        used to advance the solution the last 600s.
+    •   nres: Number of local residual evaluations (e.g., per cell) for all time-steps the last 600s.
+    •   liniter: Total number of linear iterations spent to advance the solution over the last 600s.
+    •   runtime: Total runtime for advancing the solution the last 600s. Details of the
+        computational platform should be reported in the questionnaire, i.e., type of hardware
+        (CPU/GPU model and make, amount and type of memory, memory bandwidth), how this was
+        used (number of threads/cores utilized, GPU offloading, etc.)
+
+                                                   14
+    •   tlinsol: Total time spent in the linear solver if applicable.
+
+It is encouraged to include an extra file
+spe11a_performance_time_series_detailed.csv that reports the same quantities for
+all the time steps and not just for the 600s report steps.
+
+The participants are encouraged to provide spatial maps for each hour from injection starts. For cross-
+group comparison the spatial maps shall be reported on a uniform Cartesian grid of 280 by 120 cells
+(.01 m by .01 m grid cells from the bottom of the domain). For each temporal snapshot indicated by H
+hours, (𝐻 = 0, 1, 2, … ), cell values should be provided in csv format in a file
+spe11a_performance_spatial_map_<H>h.csv of the form:
+# x [m], y [m], cvol[m^2], arat[-], CO2 max_norm_res[-], H2O max_norm_res[-], CO2
+mb_error[-], H2O mb_error[-], post_est [-]
+5.000e-03, 5.000e-03, 1.234e+56, 1.234e+56, 1.234e+56, <..>
+1.500e-02, 5.000e-03, 1.234e+56, 1.234e+56, 1.234e+56, <..>
+…
+2.795e+00, 5.000e-03, 1.234e+56, 1.234e+56, 1.234e+56, <..>
+<…>
+
+The reporting quantities provided as spatial maps are defined as:
+
+    •   cvol: Average geometric cell volume of the computational grid inside the given 1cm x 1cm
+        cell of the reporting grid at latest time-step.
+    •   arat: Average aspect ratio (vertical/lateral) of the computational grid used inside the 1cm x
+        1cm reporting cell.
+    •   max_norm_res: Maximum normalized residual within the 1cm x 1cm reporting box at
+        convergence of latest time-step, defined for each component 𝑖 as
+                                                   𝛥𝑡        𝑟𝑖,𝑘
+                                                        max | | ,
+                                                    𝜎𝑖   𝑘   𝛷𝑘
+        namely,the maximum (over all computational cells 𝑘 inside the reporting box) absolute value
+        of the residual 𝑟𝑖,𝑘 (the discrete version of the summand in Eq. (2.2)) divided by the local pore
+        volume 𝛷𝑘 , multiplied by the time step 𝛥𝑡, and divided by the surface density 𝜎𝑖 of the
+        respective component (CO2/H2O). If this quantity cannot easily be computed for your
+        numerical method, please specify how you define a similar measure in the questionnaire.
+    •   mb_error: Mass-balance error within the 1cm x 1cm reporting box at convergence of latest
+        time-step, defined for each component 𝑖 as
+                                                      𝛥𝑡 ∑𝑘 𝑟𝑖,𝑘
+                                                       𝜎𝑖 ∑𝑘 𝛷𝑘
+        namely, the sum (over all computational cells 𝑘 inside the reporting box) of the residuals
+        multiplied by the time step 𝛥𝑡, and divided by the product of the pore volume of the
+        reporting cell ∑𝑘 𝛷𝑘 and the surface density 𝜎𝑖 of the respective component. If this quantity
+        cannot easily be computed for your numerical method, please specify how you define the
+        mass-balance error in the questionnaire.
+    •   post_est: A posteriori estimate of the error between the computed and the true solution
+        within the 1cm x 1cm reporting box at convergence of latest time-step. Please specify how
+        you define the error estimate in the questionnaire.
+
+For both sparse and dense data, the participants are encouraged to add columns with extra
+performance metrics that are relevant for their solution approach. As an example, if adaptive implicit
+methods (AIM) are used, extra performance data may be spatial maps of implicit/explicit variables.
+
+The reporting quantities above are supplemented by the questionnaire as given in Table 3 (also
+available separately as spe11a_questionnaire.xls):
+
+                                                   15
+ Question                                             Numerical value       Free-form text response
+                                                      (where applicable)    (where applicable)
+ Simulator name, version, and reference
+ Primary variables
+ Spatial discretization
+ Time discretization
+ Linear solvers (incl. preconditioner)
+ Notable aspects of solution strategy
+ Specification of compute platform
+ Resolution of ambiguities in the description
+ Deviations from the description
+ Any other comments
+Table 3: Questionnaire for supporting information to the CSP submissions.
+
+
+
+Moreover, we strongly encourage all participants to provide as much additional data as possible that
+is helpful for the reproduction of the submitted results. This can be input decks for the performed
+simulations, source code, container images etc. The information should be provided either in form of
+persistent links to data (and software) published elsewhere or by uploading the data (and software)
+as supplementary material (maximum 100MB) following instructions given on the CSP website
+(https://spe.org/csp).
+
+
+
+
+                                                 16
+    3. Technical description CSP 11B
+The CSP 11B is a 2D geometry, set at field scale and conditions. No real analogue exists, but the setup
+is typical of the Norwegian Continental Shelf and the scenario that the downscaled experiment
+underlying Version 11A sought to mimic. Many of the challenges from Version 11A carry over to
+Version 11B, although the balance of timescales between different processes are altered as one goes
+from lab conditions to field conditions, see discussion in Kovscek et al. (2023). A significant
+simplification of 11B relative to 11A lies in the higher density and lower compressibility of the CO2-
+rich phase that make the system easier to solve numerically. We recommend that participants start
+with CSP 11B.
+
+Version 11B nonetheless contains separate challenges. Firstly, thermal effects are included.
+Furthermore, we emphasize again the challenge of capturing the onset and development of
+convective mixing accurately. Moreover, the injection of a relatively cool CO2 super-critical phase will
+lead to potentially significant thermal effects in the near-well regions. Another challenge arises due
+to the boundary conditions, as Version 11B is essentially a closed system. The 2D nature of the
+domain, seen together with the lack of geomechanical response, therefore implies that some
+pressure buildup is to be expected.
+
+
+
+3.1 Relationship to CSP 11A
+The CSP 11B is a geometric scaling of CSP 11A, as illustrated in Figure 5.
+
+
+
+
+Figure 5: A sketch of the benchmark geometry for CSP 11B, which is a scaling of the geometry in CSP
+11A. For a detailed description, please refer to the caption of Figure 2.
+
+We summarize the commonalities and differences between CSP 11A and 11B as follows:
+
+1) The governing equations for CSP 11A apply to 11B, with the extension to thermal effects. Thus
+   Section 2.1 applies to CSP 11B, including the consideration of pure water (no salts).
+2) A thermal equation is introduced for CSP 11B, as detailed below.
+3) The geometry of CSP 11A is reused in CSP 11B, with the following scaling:
+   a) The horizontal scale (x-axis) is scaled 1:3000.
+   b) The vertical scale (z-axis) is scaled 1:1000.
+   Thus, the overall dimensions of the CSP 11B is a vertical cross-section measuring 8.4km
+   horizontally and 1.2km vertically. We emphasize that we keep the coordinate system oriented
+   with the vertical direction pointing “up” and the origin in the “lower-left” corner of the domain.
+4) The geometric scaling applies also to the definition of Boxes A, B and C, and the well placements.
+5) The only exception to the pure scaling of the geometry are the injection wells, which are kept
+   circular, with a radius of 0.15m.
+6) As with CSP 11A, we assign a nominal depth to Version 11B of 1m to allow us to work with
+   volumetric quantities.
+7) The initial and boundary conditions, together with the injection schedule, are updated to be
+   consistent with field conditions, see specification below.
+
+                                                   17
+8) Facies properties are updated to be representative of field conditions, see specification below.
+
+
+We define the three boxes in terms of their bottom left and top right corners, stated as (𝑥, 𝑧)
+(measured relative to the lower left corner of the domain):
+
+        Box A: Bottom left (3300, 0), top right (8300, 600)
+        Box B: Bottom left (100, 600), top right (3300, 1200)
+        Box C: Bottom left (3300, 100), top right (7800, 400)
+
+Note that in contrast to CSP 11A, Box A and Box B do not extend to the boundary. The reason for this
+will be clear in Section 3.3.
+
+The two injection wells have (𝑥, 𝑧) coordinates:
+
+        Well 1: (2700, 300)
+        Well 2: (5100, 700)
+
+The two pressure observation points have (𝑥, 𝑧) coordinates:
+       POP 1: (4500, 500)
+       POP 2: (5100, 1100)
+
+
+Furthermore, to avoid ambiguity, we define the following quantity:
+
+        One year is defined as exactly 365 days, containing 31,536,000 seconds.
+
+
+
+3.2 Thermal equations
+Following the presentation in Lake et al. (2014), we give the thermal equation for multi-phase flows
+in porous media as (with the omission of kinetic energy):
+
+                                         𝜕                                                   (3.1)
+                                            (𝜌 𝜙𝑠 (𝑒 − 𝑔𝑧)𝐽)
+                        ∑ [              𝜕𝑡 𝛼 𝛼 𝛼                       ]=0
+                       𝛼=𝑤,𝑛,𝑠 +𝛁 ∙ (𝒖α (𝜌𝛼 𝑒𝛼 + 𝑝 − 𝜌𝛼 𝑔𝑧) − 𝜙𝑠𝛼 𝜅𝛼 ∇𝑇)
+
+In this equation, we denote the solid phase by 𝛼 = 𝑠. As convention set the “saturation” of the solid
+phase such that 𝜙𝑠𝑠 = 1 − 𝜙, and its “Darcy flux” as zero 𝒖α = 0. Furthermore, in Eq. (3.1) 𝑒𝛼 is the
+internal energy per mass, while 𝜅𝛼 is the thermal conductivity. As in Eq. (2.2), 𝐽 denotes reservoir
+volume per domain volume, and will be detailed in Section 3.3.
+
+Thermodynamics: The general thermodynamics defined in Section 2.1 also apply to CSP 11B, with
+the addendum that the internal energy and thermal conductivity of the wetting and non-wetting
+phase is considered independent of composition, i.e., 𝑒𝛼 = 𝑒𝛼 (𝑝, 𝑇), where the dependencies follow
+the same reference (NIST) as given in Section 2.1. For the solid phase, the internal energy is given in
+terms of temperature only, and is assumed to correspond to a constant specific heat capacity, i.e.:
+
+
+                                             𝑒𝑠 (𝑇) = 𝐶𝑠 𝑇                                   (3.2)
+
+The specific heat capacity and the thermal conductivity are given in section 3.4.
+
+We remark that since we consider the internal energy of each phase as a function of pressure and
+temperature, Eq. (3.1) can be linearized to provide a temperature equation.
+
+
+                                                   18
+3.3 Initial and boundary conditions
+We define initial and boundary conditions consistent with a depth of about 2000 m to the top of the
+defined geometry. Based on a presumed geothermal gradient of 25 °C per km, we define the function
+𝑇𝑔𝑒𝑜 (𝒙) for 𝒙 = (𝑥, 𝑧) as:
+
+
+                                          𝑇geo (𝒙) = 70 − 0.025𝑧                                 (3.3)
+
+
+Boundary conditions: All boundaries are given no-flow boundary conditions for the fluid as stated in
+Eq. (2.12). For the energy equation we consider an insulating boundary condition for the left and right
+boundary:
+
+
+                                                𝒏 ⋅ ∇𝑇 = 0                                       (3.4)
+
+and constant temperature for the top and bottom boundaries; thus, for any point any point 𝒙𝐵 on the
+top or bottom boundary:
+
+                                             𝑇(𝒙𝐵 ) = 𝑇geo (𝒙𝐵 )                                 (3.5)
+
+
+To avoid an unphysical increase in reservoir pressure, we introduce additional volume at the horizontal
+boundaries. This is a variant of what is commonly known as pore volume multipliers, that are typically
+implemented by giving cells at the boundary of the domain an elevated volume content. Herein, we
+specify these conditions in rigorous mathematical terms as follows.
+
+We define by ℓ𝐵 (𝒙𝐵 ) (units of meters) the volume per area of the boundary. For any 𝜖 > 0, we can
+extend this function to the whole domain, denoted 𝐿𝜖𝐵 , by using the notation 𝒙𝐵 (𝒙) to identify the
+closest point on the boundary to 𝒙:
+
+                                     𝜖 −1 ℓ𝐵 (𝒙𝐵 (𝒙))     if    |𝒙𝐵 (𝒙) − 𝒙| < 𝜖                 (3.6)
+                       𝐿𝜖𝐵 (𝒙) = {
+                                             0        otherwise
+
+
+In particular, the limit 𝐿0𝐵 (𝒙) = lim 𝐿𝜖𝐵 (𝒙) implies that 𝐿0𝐵 is a Dirac-type distribution on the boundary
+                                 ϵ→0
+with weight ℓ𝐵 , where the extra volume is interpreted to lie “just inside” the boundary. We now
+formally augment the volume of the domain to include this extra volume, i.e.:
+
+                                             𝐽(𝒙) = 1 + 𝐿0𝐵 (𝒙)                                  (3.7)
+
+This has the effect of introducing an extra volume per area of ℓ𝐵 immediately inside the boundary. The
+effect is that the boundary has the capacity to buffer fluids and energy, while all other aspects of the
+governing equations remain essentially unchanged. Importantly, the definition of the effective
+reservoir volume given in Eq. (3.6) can be approximated by using any finite value of 𝜖, so that 𝐽(𝒙) ≈
+1 + 𝐿𝜖𝐵 (𝒙), and then implemented using a single layer of grid cells with this width.
+
+The boundary volumes per area are specified as
+
+    •   ℓ𝐵 (𝒙𝐵 ) = 5 ⋅ 104 m for 𝒙𝐵 on the left and right boundaries, within facies 2 to 5.
+    •   ℓ𝐵 (𝒙𝐵 ) = 0m for 𝒙𝐵 on the left and right boundaries, within facies 1 and 7.
+    •   ℓ𝐵 (𝒙𝐵 ) = 0m for 𝒙𝐵 on the top and bottom boundaries.
+                                                     19
+Additionally, the two injection wells (𝑗 = 1,2) are equipped with fixed temperature boundary
+conditions during injection, thereafter zero heat transfer, i.e., for 𝑥𝑗 ∈ Γ𝑗 :
+
+                                        𝑇(𝑥𝑗 ) = 𝑇𝑤𝑒𝑙𝑙 if 𝑄𝑗 > 0                                  (3.8)
+
+                                         ∇𝑇 ⋅ 𝒏 = 0 if 𝑄𝑗 = 0
+
+
+
+Initial conditions: The CSP 11B is initialized at 𝑡 = −3.1536 ⋅ 1010 s (1000 years before injection
+begins). The initial condition is given by an initially stagnant water-filled reservoir following the
+geothermal gradient:
+                                      H O                                                         (3.9)
+                           𝑠𝑤 = 1, 𝜒𝑤2 = 1, 𝒖𝛼 = 0 and 𝑇(𝒙) = 𝑇geo (𝑧)
+
+To make the initial condition well-posed, we specify a pressure at the center of Well 1 of 3.0 ⋅ 107 Pa.
+Due to the possibility of natural thermal convection, this initial condition is discussed in more detail in
+Section 5.5.
+
+
+
+3.4 Facies properties
+The geometry contains seven facies, six permeable and one impermeable. These provide the definition
+of the material properties, as given in Tables 4 and 5. The material properties are synthetic, and are
+chosen to be characteristic of storage reservoirs at the Norwegian Continental Shelf.
+
+
+
+                  Horizontal           Immobile
+                                                                Diffusion Diffusion
+                   intrinsic  Porosity  wetting    Rock heat
+                                                                constants constants
+                 permeability    𝜙     saturation conductiy 𝜅𝑠
+                                                                 𝐷𝑤        𝐷𝑔
+                      𝑘ℎ        [−]      𝑠𝑤,imm   [W m−1 K −1 ]    2  −1
+                                                                 [m s ] [m2 s−1 ]
+                     [m2 ]                [−]
+
+   Facies 1       1.0 ⋅ 10−16      0.1       0.32          1.90             10−9       2 ⋅ 10−8
+                           −13
+   Facies 2       1.0 ⋅ 10         0.2       0.14          1.25             10−9       2 ⋅ 10−8
+                           −13
+   Facies 3       2.0 ⋅ 10         0.2       0.12          1.25             10−9       2 ⋅ 10−8
+                           −13
+   Facies 4       5.0 ⋅ 10         0.2       0.12          1.25             10−9       2 ⋅ 10−8
+                           −12
+   Facies 5       1.0 ⋅ 10        0.25       0.12          0.92             10−9       2 ⋅ 10−8
+                           −12
+   Facies 6       2.0 ⋅ 10        0.35        0.1          0.26             10−9       2 ⋅ 10−8
+   Facies 7             0           0        N/A           2.00              0             0
+Table 4: Facies properties for 11B and 11C that vary between facies.
+
+
+ Immobile non-wetting saturation 𝑠𝑛,imm [−]                                                   0.1
+                      ∗
+ Max cap- pressure 𝑝cap,max   [Pa]                                                          3 ⋅ 107
+ Shape exponent capillary pressure 𝑐2 [−]                                                     1.5
+ Dispersivity 𝐸 [m]                                                                            10
+ Rock specific heat capacity 𝐶𝑠 [kJ kg −1 K −1 ]                                           8.5 ⋅ 10−1
+ Rock density 𝜌𝑠 [kg m−3 ]                                                                   2500
+ Shape exponents relative permeability 𝑐𝛼,1 [−]                                               1.5
+Table 5: Facies properties for 11B and 11C that are equal in all facies.
+                                                    20
+From the horizontal permeability, the full facies permeability is defined based on a 10:1 horizontal to
+vertical anisotropy ratio as:
+
+                                             𝑘 (𝒙)     0                                     (3.10)
+                                     𝒌(𝒙) = ( ℎ              )
+                                               0   0.1 𝑘ℎ (𝒙)
+
+
+
+We define capillary entry pressure based on the Leverett J-scaling:
+
+                                                                                             (3.11)
+                                              𝜙              N
+                                    𝑝entry = √ ⋅ 6.12 ⋅ 10−3
+                                              𝑘𝑥             m
+
+where the value 6. 12 ⋅ 10−3 N/m is based on Abdoulghafour et al. 2020.
+
+
+
+3.5 Operational conditions
+CO2 injection protocol:
+
+    1. Both wells are inactive, 𝑄1 (𝑡) = 𝑄0 (𝑡) = 0 for 𝑡 ≤ 0.
+                                                                      kg
+    2. CO2 injection in Well 1 at constant rate 𝑄1 (𝑡) = 0.035 s m at 𝑇𝑤𝑒𝑙𝑙 = 10° C for 0 < 𝑡 ≤
+        1.5768 ⋅ 109 s (continuous injection for 50 years).
+                                                              kg
+    3. CO2 injection in Well 2 with rate 𝑄2 (𝑡) = 0.035 s m at 𝑇𝑤𝑒𝑙𝑙 = 10°C for 7.884 ⋅ 108 < 𝑡 ≤
+       1.5768 ⋅ 109 s (start after 25 years, end 25 years later).
+Monitor CO2 flow and transport until final time 𝑡 = 3.1536 ⋅ 1010 (1000 years)
+
+
+
+3.6 Measurables
+The same measurables as for CSP 11A (defined in Section 2.5) also apply to CSP 11B. In addition, we
+request CO2 accumulated in boundary volumes:
+
+
+3.6.1 CO2 in boundary volumes (SPE 11B and 11C only)
+The total mass of CO2 in all boundary volumes (CO2 in any form within the region where 𝐿0𝐵 ≠ 0 in
+the sense defined in Section 3.3) shall be reported in kg.
+
+
+
+3.7 Data reporting
+Data reporting shall follow the same structure for CSP 11A (detailed in Section 2.6), with the
+following changes:
+
+    1) Sparse data: Shall be reported at 3.1536 ⋅ 106 s intervals (10 data points per year) starting at
+       the injection in a file spe11b_time_series.csv, on the same form as in Section 2.6.1,
+       with the addition of a final column with values of boundary CO2 (defined in Section 3.6.1).
+    2) Dense data: A spatial map of all field variables (pressure, saturation, phase composition and
+       temperature) shall be reported for every five years from injection start. The spatial maps
+       shall be reported on a uniform Cartesian grid of 840 by 120 cells (10 m by 10 m grid cells
+       from the bottom of the domain). For each temporal snapshot indicated by Y years, (𝑌 =
+        0, 5, 10, …), cell values should be provided in csv format in a file
+
+                                                  21
+       spe11b_spatial_map_<Y>y.csv on the same form as in Section 2.6.2, with the
+       addition of a final column with temperature values in Celsius.
+    3) The performance data shall be reported with the same change in temporal and spatial
+       resolution as indicated in points 1) and 2) above.
+
+
+
+    4. Technical description CSP 11C
+The CSP 11C is a 3D geometry, set at field scale and conditions, typical of the Norwegian Continental
+Shelf. Version 11C, due to its 3D structure, induces significant computational overhead relative to
+11B. While for 11A and 11B it is feasible to consider grids that fully resolve the development of
+convective mixing, this may be impossible for 11C. Furthermore, the existing challenges associated
+with correctly capturing the dynamics near the gas-water contact will be exacerbated. On the other
+hand, the 3D nature of the domain accommodates the injection volume better, and the pressure
+buildup seen in Version 11B should be lessened.
+
+
+
+4.1 Relationship to CSP 11B
+The CSP 11C is an arched 3D extrusion of CSP 11B, as illustrated in Figure 6.
+
+
+
+
+Figure 6: A sketch of the benchmark geometry for CSP 11C. For a detailed description, please refer to the text
+below and to caption of Figure 2.
+
+We summarize the commonalities and differences between CSP 11B and 11C as follows:
+
+1) The governing equations and facies properties for CSP 11B apply to 11C.
+2) The geometry of CSP 11B is reused in CSP 11C, with the following modification: The depth (along
+   the y-axis) is extended to 5000 meters and deformed such that the top surface forms a parabola
+   elevating the central part of the domain by 150m. See section 4.2 for precise definition.
+
+    We emphasize that we keep the coordinate system oriented with the vertical direction pointing
+    “up” and the origin in the “lower-left” corner of the domain, using the convention that the two
+    horizontal axes are enumerated first, i.e., with reference to Figure 5 coordinate triplets are given
+    as (𝑥, 𝑦, 𝑧).
+
+
+                                                     22
+3) The geometric scaling affects the definition of Boxes A, B and C, and the well placements, as
+   detailed in Section 4.2.
+4) The initial and boundary conditions, together with the injection schedule, are updated to be
+   consistent with the 3D extension; see specification below.
+
+
+4.2 Definition of geometry, well placement and reporting boxes
+For a precise definition of the geometry, we consider a reference and a physical configuration, with a
+mapping between them.
+
+
+
+
+Figure 7: A sketch of the benchmark geometry for CSP 11C in the reference configuration.
+
+
+
+Reference configuration: Let 𝑈 = [0, 8400] × [0, 5000] × [0, 1200] be the extrusion of the geometry
+from CSP 11B to a depth of 5000 meters, as shown in Figure 7. That is, for any coordinate triplet
+(𝑢, 𝑣, 𝑤) ∈ 𝑈, the facies properties are defined only by the first horizontal coordinate 𝑢 and the vertical
+coordinate 𝑤, according to the geometry defined in Section 3.1.
+
+Mapping: For any reference coordinate triplet 𝒖 = (𝑢, 𝑣, 𝑤) ∈ 𝑈 in the reference configuration, we
+identify a position in physical space as:
+                                                         𝑢
+                      𝑥                                  𝑣
+                     (𝑦) = Φ(𝑢, 𝑣, 𝑤) = (               𝑣 − 2500 2    𝑣 )                       (4.1)
+                      𝑧                  𝑤 + 150 (1 − (         ) )+
+                                                          2500       500
+
+Thus, the domain has a baseline gradient of 2 meters per km in the 𝑦-direction, so that the back
+boundary (at 𝑦 = 𝑣 = 5000) is 10 meters higher than the front boundary (at 𝑦 = 𝑣 = 0). Furthermore,
+the domain is arched in the 𝑦-direction following a parabolic shape with maximum elevation difference
+(relative to the baseline gradient) of 150 meters at the central ridge of the domain (𝑦 = 𝑣 = 2500).
+The absolute maximum elevation of the ridge is at 𝑦 = 𝑣 = 2541 + 2/3.
+
+We note that Φ(𝑢, 𝑣, 𝑧) is an invertible function for the domain of interest 𝑋 = Φ(𝑈), and we denote
+the inverse as Ψ = Φ−1 . For any physical coordinate triplet 𝒙 = (𝑥, 𝑦, 𝑧) ∈ 𝑋 ⊂ ℝ3, we can thus
+recover the position in reference configuration as:
+                                                               𝑥
+                        𝑢                                      𝑦
+                      ( 𝑣 ) = Ψ(𝑥, 𝑦, 𝑧) =                   𝑦 − 2500 2    𝑦                    (4.2)
+                       𝑤                      𝑧 − 150 (1 − (         ) )−
+                                             (                 2500       500)
+
+
+
+
+                                                     23
+Physical configuration: The facies distribution, as well as the location of boundaries, for positions 𝒙 ∈
+𝑋 in the physical configuration can now be obtained based on the facies distribution, and boundaries,
+of the reference configuration and the mapping Ψ.
+
+The boxes are adjusted to account for the 3D configuration. We state the (𝑥, 𝑦, 𝑧) coordinates of the
+three boxes (measured relative to the lower left corner of the domain) in terms near bottom left and
+far top right corners:
+
+        Box A: Near bottom left (3300, 0, 0), far top right (8300, 5000, 750)
+        Box B: Near bottom left (100, 0, 750), far top right (3300, 5000, 1350)
+        Box C: Near bottom left (3300, 0, 250), far top right (7800, 5000, 550)
+
+Note that the definitions of Boxes A and B extend outside the bottom (resp. top) boundary, and the
+actual boxes can be truncated to the part within the physical domain 𝑋.
+
+The two injection wells are given as follows. Injection well 1 is considered as straight (horizontal) in
+physical space, and is open/perforated between the near and far points with (𝑥, 𝑦, 𝑧) coordinates:
+
+        Well 1: Near end (2700, 1000, 300), far end (2700, 4000, 300)
+
+
+Injection well 2 is considered as curved following the geology in physical space, and is thus a straight
+well in reference space, which is open/perforated between the near and far points with (𝑢, 𝑣, 𝑤)
+coordinates:
+
+        Well 2: Near end (5100, 1000, 700), far end (5100, 4000, 700)
+
+
+Note in particular that this implies that Well 2 is slightly longer than Well 1, which must be taken into
+account as the injection rates are given per well-length.
+
+
+The two pressure observation points have (𝑥, 𝑦, 𝑧) coordinates:
+
+        POP 1: (4500, 2500, 655)
+        POP 2: (5100, 2500, 1255)
+
+
+Furthermore, to avoid ambiguity, we keep the definition from 11B of the following quantity:
+
+        One year is defined as exactly 365 days, containing 31,536,000 seconds.
+
+
+
+4.3 Initial and boundary conditions
+We define initial and boundary conditions based on a depth of about 2000 m to the top of the defined
+geometry.
+
+Boundary conditions: The left, right, front, back, boundaries are defined to have boundary conditions
+as defined in Section 3.3 for the left and right boundaries. The top and bottom boundaries are defined
+to have the same boundary conditions as defined in Section 3.3.
+
+We point out that as the top and bottom boundaries are non-planar, the temperature boundary
+condition given in Eq. (3.3) implies that the temperature on the top boundary varies between a
+
+                                                   24
+minimum temperature of about 36.12 °C at the top of the arch and a maximum of 40 °C where the top
+boundary meets the front. Similar variation applies to the bottom boundary.
+
+The two injection wells (𝑗 = 1,2) are equipped with fixed temperature boundary conditions during
+injection, thereafter zero heat transfer, as stated in Eq. (3.7).
+
+Initial conditions: The CSP 11C is initialized at 𝑡 = −3.1536 ⋅ 1010 s (1000 years before injection). The
+initial condition is given by an initially stagnant water-filled reservoir following the geothermal
+gradient, as stated in Eq. (3.8).
+
+To make the initial condition well-posed, we specify a pressure at the centerline of Well 1 of 3.0 ⋅ 107
+Pa.
+
+
+4.4 Facies properties
+The geological model contains seven facies; six permeable and one impermeable. These have
+properties as given in Tables 4 and 5, and the entry pressure follows the scaling given in Eq. (3.10).
+
+From the horizontal permeability, the full facies permeability is defined based on a 10:1 horizontal to
+vertical anisotropy ratio in the reference configuration as:
+
+                                        𝑘ℎ (𝒖)   0        0                                    (4.3)
+                                ̂
+                                𝒌(𝒖) = ( 0     𝑘ℎ (𝒖)     0     )
+                                          0      0    0.1 𝑘ℎ (𝒖)
+
+The permeability at a point 𝒙 = Φ(𝒖) in the physical configuration is then given by the standard
+transformation rules as:
+                                                1                                              (4.4)
+                                     𝒌(𝒙) =            ̂(𝒖)𝑭𝑇 (𝒖)
+                                                   𝑭(𝒖)𝒌
+                                              𝐽(𝒖)
+where
+                                        1              0          0
+                                        0              1          0
+                           𝑭(𝒖) = ∇Φ = (        3 𝑣 − 2500     1    )                          (4.5)
+                                        0      − (         )+     1
+                                                25  2500      500
+and 𝐽(𝒖) = det(𝑭(𝒖)) = 1.
+
+This definition of the permeability ensures that the anisotropy follows the layering in the y-direction
+but intersects the layering in the 𝑥-direction. This captures, albeit only conceptually, the computational
+difficulties associated with both the geological situations of large-scale deformation and erosion
+surfaces.
+
+
+
+4.5 Operational conditions
+CO2 injection protocol:
+
+    1. Both wells are inactive, 𝑄1 (𝑡) = 𝑄0 (𝑡) = 0 for 𝑡 ≤ 0.
+    2. CO2 injection in Well 1 with a total rate of 50 kg/s at 𝑇𝑤𝑒𝑙𝑙 = 10° C for 0 < 𝑡 ≤ 1.5768 ⋅ 109 s
+       (continuous injection for 50 years). As Well 1 is 3000m long, this corresponds to 𝑄1 (𝑡) ≈
+                      kg
+        1.667 ⋅ 10−2 m⋅s (mass per length per time).
+
+
+                                                   25
+    3. CO2 injection in Well 2 with a total rate of 50 kg/s at 𝑇𝑤𝑒𝑙𝑙 = 10°C for 7.884 ⋅ 108 < 𝑡 ≤
+       1.5768 ⋅ 109 s (start after 25 years, end 25 years later). As Well 2 is about 3002.6m long, this
+                                               kg
+        corresponds to 𝑄2 (𝑡) ≈ 1.665 ⋅ 10−2 m⋅s.
+Monitor CO2 flow and transport until final time 𝑡 = 3.1536 ⋅ 1010 (1000 years). The injection rates
+correspond to about 1.6 Mt/y for each well, thus a total injected mass of about 118 Mt.
+
+
+
+4.6 Measurables
+The same measurables as for CSP 11B (defined in Section 3.6) also apply to CSP 11C.
+
+4.7 Data reporting
+Data reporting shall follow the same structure for CSP 11B (detailed in Section 3.7), with the
+following changes:
+
+    4) Sparse data: Shall be reported at 3.1536 ⋅ 106 s intervals (10 data points per year) starting at
+       the injection in a file spe11c_time_series.csv.
+    5) Dense data: A spatial map of all field variables (pressure, saturation, phase composition and
+       temperature) shall be reported for every five years from injection start. The spatial maps
+       shall be reported on a uniform Cartesian grid relative to the reference configuration, of 168
+       by 100 by 120 cells (50 m by 50 m by 10 m grid cells from the bottom of the domain). For
+       each temporal snapshot indicated by Y years, 𝑌 =
+          0, 5, 10, 15, 20, 25, 30, 35, 40,45, 50, 75,100, 150, 200,
+        {                                                            } (26 reporting times) cell values
+          250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000
+       should be provided in csv format in a file spe11c_spatial_map_<Y>y.csv on the
+       same form as in Section 2.6, with the addition of a final column with temperature values in
+       Celsius.
+    6) The performance data shall be reported with the same change in temporal and spatial
+       resolution as indicated in points 1) and 2) above.
+
+
+
+    5. Remarks
+We do not expect that it is possible at the time of issuing this CSP to solve any of the three versions
+of this CSP in the classical mathematical sense (grid-converged numerical approximation within
+computable error bounds). Moreover, based on our experience, we expect that even getting the
+various versions of the CSP to run will require careful choices in terms of how to approximate the
+spatial variable (i.e., grids), the constitutive functions, and parameters in the computational
+algorithms. In this section, we highlight some experiences that may be useful to those attempting to
+simulate the CSP for the first time.
+
+
+
+    5.1 Considerations for version 11A
+Several quantitative observations can be made that guide the numerical approximation choices, as
+illustrated by the results and discussion presented in the numerical studies of the physical
+experiment described in the introduction to Section 2 (see e.g., Flemisch et al (2023), Salo-Salgado et
+al (2023), Green et al (2023) and Wapperom et al (2023)). Some of these are:
+
+    •   Grid resolution: A large part of the domain will not see substantial gradients in the variables
+        and can be represented by relatively coarse grids. On the other hand, the gas-water interface
+        (Figure 7, sub-figure B) is quite sharp, and will require a very fine grid to resolve accurately.
+
+
+                                                    26
+        Similarly, the onset of convective mixing (Figure 7, sub-figure D) happens at a cm-scale,
+        suggesting a grid resolution on the order of millimeters to resolve accurately.
+    •   Constitutive functions: The capillary pressure in the coarser sands (Facies 2-5) is relatively
+        small, and gravity segregation dominates even during the injection phase. Thus, the
+        saturation is almost binary (discontinuous). If these discontinuities are not resolved by the
+        grid, it may be advantageous to upscale the constitutive functions to the scale of the grid
+        (likely leading to less non-linear relative permeabilities)
+    •   Maximum capillary pressure: Gas-phase CO2 does not enter any of the seal facies (Facies 1).
+        Considering the elevation of the spill-point, the gas column thus does not exceed 10-12 cm
+        height. Correspondingly, it is not expected that capillary pressures exceeding 10-12 cm water
+        column (1000-1200 Pascal) will appear in the domain. As such, modifying the capillary
+        pressure for values above this value should not change substantially the solution (e.g., we
+        expect that using a value of 𝑝cap,max = 2500 Pascal will not substantially alter the solution).
+    •   Pressure boundary: Because the CO2 is in gas phase the compressibility is high, and the
+        volume is therefore quite sensitive to pressure variations. As such, care should be taken if
+        approximating the pressure boundary conditions.
+
+
+    5.2 Considerations for Versions 11B and 11C
+Additional to the considerations presented in Sections 3 and 4, some more detailed comments can be
+made based on theoretical considerations.
+
+    •   Grid resolution: Gravity-driven convective mixing is also expected to be important for 11B
+        and 11C. Using theoretical estimates (see e.g., Riaz et al., 2006 and Elenius et al. 2012) and
+        parameters from Facies 5, we expect an onset time of a few years, with critical wavelength of
+        less than five meters. This indicates that a grid-converged solution may require grid cells in
+        the order of a meter or less. On the other hand, suitable scale separation may exist for
+        upscaled models of convection to be applicable for coarser grids.
+    •   Maximum capillary pressure: As for 11A, there is a finite limit on the possible height of a gas
+        column, and therefore it is likely that a significantly lower value of cut-off value for the
+        capillary pressure can be used without altering the solution.
+    •   Bottom boundary: The lowest facies is impermeable; however, it does still conduct heat. This
+        leads to two alternatives: Either including it as part of the domain or asserting the boundary
+        conditions above the facies. In this latter case, care must be taken to implement thermal
+        boundary conditions that are consistent.
+
+
+
+    5.3 Dispersion
+If coarse grids are applied, it is commonly considered that the numerical dispersion will dominate the
+physical diffusion and dispersion, and that the terms related to physical diffusion and dispersion are
+not necessary to include explicitly.
+
+On the other hand, physical diffusion is needed when considering grid convergence studies,
+otherwise there is no lowest wavelength for convective mixing, and a grid-converged solution cannot
+be computed.
+
+The threshold between what is considered “coarse” and “fine” depends on the particular numerical
+method, but as a rule of thumb this is proportional to the dispersivity (about 1cm for 11A, and about
+10m for 11B and 11C).
+
+
+
+                                                  27
+    5.4 Vertical equilibrium pressure and saturation distribution
+Capillary barriers are important in excluding gas from the seal facies and also for the migration
+patterns in the upper reservoir where the facies are fining upwards. To give some intuition to this for
+those who are unfamiliar with capillary barriers in these systems, we exemplify the typical pressure
+and saturation under a capillary barrier for a 1D system in equilibrium in Figure 8.
+
+
+
+
+Figure 8: Pressure and saturation distribution near hypothetical discontinuities between Facies 1 (above
+discontinuity) and Facies 3-5 (below the discontinuity) for Version 11A, assuming equilibrium pressure and
+saturation. The left figure shows the phase pressures corresponding to a gas column is shown with a 10cm
+height, based on Facies 3 being the lower facies. Dashed lines indicate the “virtual” gas pressures obtained by
+adding the entry pressure to the water pressure for the two facies. The right figure shows the saturation profile
+if the lower facies is Facies 3, 4 or 5, respectively. The shape of the curves is exactly the same as if capillary
+pressure would be plotted instead of height, as can be seen by comparison to Figure 4.
+
+This example is based on the exact solution to the hydrostatic system when density variations are
+negligible. As can be seen, the saturation is nearly independent of vertical elevation near the
+discontinuity when the lower material properties correspond to Facies 4 and 5.
+
+We note that the sharpness in transition of the saturation depends completely on the shape of the
+capillary pressure function and must be seen in relation to the vertical extent. Indeed, for finer sands,
+such as Facies 3, we see more gradual saturation changes.
+
+A detail plotted in Fig. 8 (left) is the “virtual” gas pressure in regions with no gas saturation. If an
+additional amount of gas was introduced in the system, this would shift the gas-water contact
+downwards, until the point where the real gas pressure immediately below the discontinuity (solid
+red line at negative heights) would equal the “virtual” gas pressure immediately above the
+discontinuity (dashed red line at positive heights). When pressure continuity is thus achieved, the
+capillary barrier will no longer be able to sustain the gas column, and gas will begin to migrate into
+the facies above the discontinuity.
+
+While the above discussion is in the context of 11A, entry pressure effects are also present in 11B and
+11C.
+
+
+
+    5.5 Initial state for Versions 11B and 11C
+Both Versions 11B and 11C are initialized at 1000 years before injection, based on a static water
+column and constant geothermal gradient, as defined in Section 3.3. In particular, this implies that
+the vertical pressure at the initial state, 𝑝𝑤,0 (𝑧), is given by a hydrostatic column satisfying:
+                                                       𝑧
+                                                                                                   (5.1)
+                      𝑝𝑤,0 (𝑧) = 3 ⋅ 107 Pa − 𝑔 ∫           𝜌𝑤 (𝑝𝑤,0 (𝑧 ′ ), 𝑇geo (𝑧 ′ )) 𝑑𝑧 ′
+                                                      300m
+
+
+                                                       28
+Here 300 appears as the vertical elevation of Well 1, and 3 ⋅ 107 Pa is the specified pressure at this
+well.
+
+
+
+
+Figure 9: Density of water and CO2 for the initial state of CSP 11B. The CO2 density is plotted both at reservoir
+temperature (based on the geothermal gradient) and the injection temperature (10 °C).
+
+Figure 9 shows water and CO2 densities based on the initial pressure distribution and geothermal
+gradient. As seen in the figure, the water density is decreasing with depth due to the thermal
+expansion being of greater importance than the mechanical compression. The profile of water
+density with depth indicates that water convection cells may appear in the domain8. By initializing
+the CSP 1000 years before injection, we therefore provide some time both for the thermal profile to
+equilibrate (in response to the facies-dependent thermal conductivity) as well as potential water
+convection to initiate. On the other hand, we do not expect that 1000 years is sufficient to calculate a
+true equilibrium state (if such exists), and the pre-injection simulation period should therefore be
+considered a compromise between computational cost and establishing a reasonable initial state.
+
+Also evident from Fig. 9 is that the injected CO2 is denser than the ambient water but is significantly
+lighter than water at reservoir temperatures. Therefore, some injected CO2 may sink in as the near-
+well region is cooled by the injection, however in general CO2 will rise and accumulate under the low-
+permeable facies.
+
+We remark that formation water in real reservoirs will in general be saline brines, leading to higher
+densities than those used in this CSP. The effects described in this section are therefore not
+necessarily expected to be common. However, prospective storage sites do exist where injection
+conditions for CO2 lead to densities close to or above the formation water, and the dynamics are
+therefore a realistic challenge for reservoir simulation.
+
+Acknowledgements
+People: In addition to those mentioned in the main text above, the authors would like to thank all of
+those who have made contributions to this CSP definition through discussions, exchanges of ideas,
+and critical comments. These include, but are not limited to, Jakub W. Both and Eirik Keilegavlen (U.
+of Bergen), Denis Voskov (TU Delft), Hamdi Tchelepi (Stanford U.), Ruben Juanes (Massachusetts
+Institute of Technology), Rainer Helmig (U. of Stuttgart), Sarah E. Gasda (Norwegian Research
+Center), Alberto Cominelli (Eni SpA) and all participants in the “FluidFlower International Benchmark
+Study”, who are co-authors of Flemisch et al. (2023): Holger Class, Mojdeh Delshad, Florian Doster,
+Jonathan Ennis-King, Jacques Franc, Sebastian Geiger, Dennis Gläser, Christopher Green, James
+
+8
+ Stability analysis indicates that Facies 5 in the lower reservoir is permeable and large enough to be near the
+critical Rayleigh number for convection to appear.
+                                                        29
+Gunning, Hadi Hajibeygi, Samuel J. Jackson, Mohamad Jammoul, Satish Karra, Jiawei Li, Stephan K.
+Matthäi, Terry Miller, Qi Shao, Catherine Spurin, Philip Stauffer, Hamdi Tchelepi, Xiaoming Tian, Hari
+Viswanathan, Denis Voskov, Yuhang Wang, Michiel Wapperom, Mary F. Wheeler, Andrew Wilkins,
+AbdAllah A. Youssef & Ziliang Zhang.
+Funding:
+
+ARK acknowledges funding from the University of Bergen for a sabbatical visit and the Stanford Center for
+Carbon Storage. BF thanks the German Research Foundation (DFG) for supporting this work by funding SFB
+1313, Project Number 327154368.
+
+
+
+
+References
+Abdoulghafour, H., Sarmadivaleh, M., Hauge, L. P., Fernø, M., & Iglauer, S. (2020). Capillary pressure
+characteristics of CO2-brine-sandstone systems. International Journal of Greenhouse Gas Control, 94, 102876.
+https://doi.org/10.1016/j.ijggc.2019.102876
+
+Elenius, M. T., Nordbotten, J. M., & Kalisch, H. (2012). Effects of a capillary transition zone on the stability of a
+diffusive boundary layer. The IMA Journal of Applied Mathematics, 77(6), 771-787.
+
+Fernø, M. A., M. Haugen, K. Eikehaug, O. Folkvord, B. Benali, J. W Both, E. Storvik, C. W. Nixon, R. L. Gawthrope
+and J. M. Nordbotten, Room-scale CO2 injections in a physical reservoir model with faults, Transport in Porous
+Media, in press. https://doi.org/10.1007/s11242-023-02013-4
+
+Flemisch, B., Nordbotten, J. M., Fernø, M. A., Juanes, R, et al. (2023). The FluidFlower International Benchmark
+Study: process, modeling results, and comparison to experimental data, Transport in Porous Media, in press.
+https://doi.org/10.1007/s11242-023-01977-7
+
+Green, C., Jackson, S. J., Gunning, J., Wilkins, A., & Ennis-King, J. (2023). Modelling the FluidFlower: Insights
+from Characterisation and Numerical Predictions. Transport in Porous Media, 1-19.
+
+Garcia, J. E. (2001). Density of aqueous solutions of CO2. Technical Report, LBNL.
+
+Islam, A. W., & Sepehrnoori, K. (2013). A review on SPE’s comparative solution projects (CSPs). J. Pet. Sci. Res, 2.
+
+Kovscek, A. R., J. M. Nordbotten, M. A. Fernø. Scaling up FluidFlower results for carbon dioxide storage in
+geological media, submitted. Preprint: https://arxiv.org/abs/2301.09853
+
+Lemmon, E. W., I. H. Bell, M. L. Huber, and M. O. McLinden, "Thermophysical Properties of Fluid Systems"
+in NIST Chemistry WebBook, NIST Standard Reference Database Number 69, Eds. P.J. Linstrom and W.G.
+Mallard, National Institute of Standards and Technology, Gaithersburg MD,
+20899, https://doi.org/10.18434/T4D303, (retrieved October 3, 2023).
+
+Lake, L., Johns, R. T., Rossen, W. R., & Pope, G. A. (2014). Fundamentals of enhanced oil recovery.
+
+Nordbotten, J. M., & Celia, M. A. (2011). Geological storage of CO2: modeling approaches for large-scale
+simulation. In Geological Storage of CO 2: Modeling Approaches for Large-Scale Simulation. John Wiley and
+Sons. https://doi.org/10.1002/9781118137086
+
+Nordbotten, J. M., Fernø, M., Flemisch, B., Juanes, R., & Jørgensen, M. (2022). Final Benchmark Description:
+FluidFlower International Benchmark Study. Zenodo. https://doi.org/10.5281/zenodo.6807102
+
+Pau, G. S., Bell, J. B., Pruess, K., Almgren, A. S., Lijewski, M. J., & Zhang, K. (2010). High-resolution simulation
+and characterization of density-driven flow in CO2 storage in saline aquifers. Advances in Water Resources,
+33(4), 443-455.
+
+Riaz, A., Hesse, M., Tchelepi, H. A., & Orr, F. M. (2006). Onset of convection in a gravitationally unstable
+diffusive boundary layer in porous media. Journal of Fluid Mechanics, 548, 87-111.
+
+
+                                                          30
+Saló-Salgado, L., Haugen, M., Eikehaug, K., Fernø, M. A., Nordbotten, J. M., & Juanes R. (2023), Direct
+Comparison of Numerical Simulations and Experiments of CO2 Injection and Migration in Geologic Media:
+Value of Local Data and Predictability, submitted. Preprint: http://arxiv.org/abs/2301.08875
+
+Spycher, N., Pruess, K., & Ennis-King, J. (2003). CO2-H2O mixtures in the geological sequestration of CO2. I.
+Assessment and calculation of mutual solubilities from 12 to 100°C and up to 600 bar. Geochimica et
+Cosmochimica Acta, 67(16), 3015-3031. https://doi.org/10.1016/S0016-7037(03)00273-4
+
+Wapperom, M., Tian, X., Novikov, A., & Voskov, D. (2023). FluidFlower Benchmark: Lessons Learned from the
+Perspective of Subsurface Simulation. Transport in Porous Media, 1-20. https://doi.org/10.1007/s11242-023-
+01984-8
+
+
+
+
+                                                       31
+
