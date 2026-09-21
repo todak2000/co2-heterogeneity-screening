@@ -290,10 +290,12 @@ anisotropy k_h/k_v = 10 per the benchmark, mobility ratio M = 10).
 The central difficulty is now apparent. Equation (3) returns a *volumetric sweep*, which
 in the analytical worldview feeds *residual* trapping. Table 2 shows SPE11b has *no*
 residual trapping to speak of. The benchmark's CO₂ is either still mobile, dissolved, or
-structurally trapped in the seal (rice1), none of which Equation (3) predicts. Comparing
-the analytical E_s (of order 0.3–0.5) to any benchmark compartment fraction is therefore a
-comparison of unlike quantities: the benchmark does not report "sweep," and the analytical
-model does not report "mobile/dissolved/seal fractions."
+structurally trapped in the seal (rice1), none of which Equation (3) predicts — Equation
+(3) was derived for waterflood displacement in which residual saturation is the dominant
+trapping mechanism, and it does not account for dissolution or structural trapping.
+Comparing the analytical E_s (of order 0.3–0.5) to any benchmark compartment fraction is
+therefore a comparison of unlike quantities: the benchmark does not report "sweep," and
+the analytical model does not report "mobile/dissolved/seal fractions."
 
 This mismatch is structural rather than numerical. The analytical correlations were
 derived for waterflood-style displacement in which a large saturable residual phase is
